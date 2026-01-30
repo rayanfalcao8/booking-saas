@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Core\Tenancy\Concerns\BelongsToBusiness;
 use Illuminate\Database\Eloquent\Model;
 
 class StaffSchedule extends Model
 {
     use BelongsToBusiness;
-    
+
     protected $fillable = [
         'business_id',
         'staff_id',

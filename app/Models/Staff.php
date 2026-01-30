@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Core\Tenancy\Concerns\BelongsToBusiness;
 use Illuminate\Database\Eloquent\Model;
 
 class Staff extends Model
@@ -13,5 +14,9 @@ class Staff extends Model
         'name',
         'email',
         'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
     ];
 }

@@ -16,4 +16,8 @@ class Service extends Model
         'buffer_min',
         'is_active',
     ];
+    
+     protected $casts = [
+        'is_active' => 'boolean',
+    ];
 }
