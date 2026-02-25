@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Core\Tenancy\Concerns\BelongsToBusiness;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Booking extends Model
 {
@@ -22,4 +23,14 @@ class Booking extends Model
         'status',
         'notes',
     ];
+
+    public function service(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Service::class);
+    }
+
+    public function staff(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Staff::class);
+    }
 }

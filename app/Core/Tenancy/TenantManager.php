@@ -27,4 +27,16 @@ class TenantManager
     {
         self::$tenant = null;
     }
+
+    public static function business(): ?\App\Models\Business
+    {
+        $id = self::id();
+
+        return $id ? \App\Models\Business::find($id) : null;
+    }
+
+    public static function timezone(): string
+    {
+        return self::business()?->timezone ?? config('app.timezone', 'UTC');
+    }
 }

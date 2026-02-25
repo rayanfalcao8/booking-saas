@@ -3,54 +3,153 @@
 namespace App\Filament\App\Resources;
 
 use App\Filament\App\Resources\BookingResource\Pages;
-use App\Filament\App\Resources\BookingResource\RelationManagers;
 use App\Models\Booking;
+use App\Models\Service;
+use App\Models\Staff;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class BookingResource extends Resource
 {
     protected static ?string $model = Booking::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-calendar';
+
+    protected static ?string $navigationGroup = 'Bookings';
+
+    protected static ?string $navigationLabel = 'Rendez-vous';
 
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                //
-            ]);
+        return $form->schema([
+            Forms\Components\Section::make('Détails')
+                ->schema([
+                    Forms\Components\Select::make('service_id')
+                        ->label('Service')
+                        ->required()
+                        ->options(fn () => Service::query()
+                            ->where('is_active', true)
+                            ->orderBy('name')
+                            ->pluck('name', 'id')
+                            ->toArray()
+                        )
+                        ->searchable(),
+
+                    Forms\Components\Select::make('staff_id')
+                        ->label('Employé')
+                        ->required()
+                        ->options(fn () => Staff::query()
+                            ->where('is_active', true)
+                            ->orderBy('name')
+                            ->pluck('name', 'id')
+                            ->toArray()
+                        )
+                        ->searchable(),
+
+                    Forms\Components\DatePicker::make('date')
+                        ->label('Date')
+                        ->required(),
+
+                    Forms\Components\TimePicker::make('start_time')
+                        ->label('Heure de début')
+                        ->required()
+                        ->seconds(false),
+
+                    Forms\Components\TimePicker::make('end_time')
+                        ->label('Heure de fin')
+                        ->required()
+                        ->seconds(false),
+
+                    Forms\Components\Select::make('status')
+                        ->label('Statut')
+                        ->required()
+                        ->options([
+                            'confirmed' => 'Confirmé',
+                            'canceled' => 'Annulé',
+                        ])
+                        ->default('confirmed'),
+                ])
+                ->columns(2),
+
+            Forms\Components\Section::make('Client')
+                ->schema([
+                    Forms\Components\TextInput::make('customer_name')
+                        ->label('Nom')
+                        ->required()
+                        ->maxLength(255),
+
+                    Forms\Components\TextInput::make('customer_email')
+                        ->label('Email')
+                        ->email()
+                        ->maxLength(255)
+                        ->nullable(),
+
+                    Forms\Components\TextInput::make('customer_phone')
+                        ->label('Téléphone')
+                        ->maxLength(50)
+                        ->nullable(),
+
+                    Forms\Components\Textarea::make('notes')
+                        ->label('Notes')
+                        ->maxLength(2000)
+                        ->columnSpanFull()
+                        ->nullable(),
+                ])
+                ->columns(2),
+        ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('date', 'desc')
             ->columns([
-                //
-            ])
-            ->filters([
-                //
+                Tables\Columns\TextColumn::make('date')
+                    ->label('Date')
+                    ->date()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('start_time')
+                    ->label('Début')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('end_time')
+                    ->label('Fin')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('service.name')
+                    ->label('Service')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('staff.name')
+                    ->label('Employé')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('customer_name')
+                    ->label('Client')
+                    ->searchable(),
+
+                Tables\Columns\BadgeColumn::make('status')
+                    ->label('Statut')
+                    ->colors([
+                        'success' => 'confirmed',
+                        'danger' => 'canceled',
+                    ])
+                    ->formatStateUsing(fn (string $state) => $state === 'confirmed' ? 'Confirmé' : 'Annulé'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()->label('Modifier'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()->label('Supprimer'),
                 ]),
             ]);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
     }
 
     public static function getPages(): array
