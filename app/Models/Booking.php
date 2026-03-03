@@ -33,4 +33,9 @@ class Booking extends Model
     {
         return $this->belongsTo(\App\Models\Staff::class);
     }
+
+    public function business(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Business::class);
+    }
 }

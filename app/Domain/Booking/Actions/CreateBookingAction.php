@@ -4,11 +4,14 @@ namespace App\Domain\Booking\Actions;
 
 use App\Models\Booking;
 use App\Models\Service;
+use App\Notifications\BusinessBookingCreated;
+use App\Notifications\CustomerBookingConfirmed;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
 use DateTimeZone;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -16,7 +19,7 @@ class CreateBookingAction
 {
     public function run(array $data): Booking
     {
-        return DB::transaction(function () use ($data) {
+        $booking = DB::transaction(function () use ($data) {
             $service = Service::query()->findOrFail($data['service_id']);
             $duration = (int) $service->duration_min + (int) $service->buffer_min;
 
@@ -40,7 +43,7 @@ class CreateBookingAction
                 ]);
             }
 
-            return Booking::create([
+            return Booking::query()->create([
                 'service_id' => $data['service_id'],
                 'staff_id' => $data['staff_id'],
                 'date' => $data['date'],
@@ -53,6 +56,26 @@ class CreateBookingAction
                 'status' => 'confirmed',
             ]);
         });
+
+        $booking->loadMissing(['service', 'staff', 'business']);
+        $this->sendCreatedNotifications($booking);
+
+        return $booking;
+    }
+
+    private function sendCreatedNotifications(Booking $booking): void
+    {
+        $businessEmail = $booking->business?->email;
+
+        if (is_string($businessEmail) && $businessEmail !== '') {
+            Notification::route('mail', $businessEmail)
+                ->notify(new BusinessBookingCreated($booking));
+        }
+
+        if (is_string($booking->customer_email) && $booking->customer_email !== '') {
+            Notification::route('mail', $booking->customer_email)
+                ->notify(new CustomerBookingConfirmed($booking));
+        }
     }
 
     private function resolveTimezone(): string

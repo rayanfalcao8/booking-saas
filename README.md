@@ -18,3 +18,10 @@ Super admin: admin@demo.com
  / password
 Tenant user: user@demo.com
  / password
+
+## Dev email notifications
+For booking emails in development, use:
+- `QUEUE_CONNECTION=sync`
+- `MAIL_MAILER=log`
+
+Then booking notification emails are written to `storage/logs/laravel.log`.
