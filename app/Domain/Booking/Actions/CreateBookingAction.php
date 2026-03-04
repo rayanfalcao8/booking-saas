@@ -2,8 +2,10 @@
 
 namespace App\Domain\Booking\Actions;
 
+use App\Core\Tenancy\TenantManager;
 use App\Models\Booking;
 use App\Models\Service;
+use App\Models\Staff;
 use App\Notifications\BusinessBookingCreated;
 use App\Notifications\CustomerBookingConfirmed;
 use Carbon\Carbon;
@@ -21,6 +23,10 @@ class CreateBookingAction
     {
         $booking = DB::transaction(function () use ($data) {
             $service = Service::query()->findOrFail($data['service_id']);
+            $staff = Staff::query()->findOrFail($data['staff_id']);
+
+            $this->assertTenantIntegrity($service, $staff);
+
             $duration = (int) $service->duration_min + (int) $service->buffer_min;
 
             $timezone = $this->resolveTimezone();
@@ -45,7 +51,7 @@ class CreateBookingAction
 
             return Booking::query()->create([
                 'service_id' => $data['service_id'],
-                'staff_id' => $data['staff_id'],
+                'staff_id' => $staff->id,
                 'date' => $data['date'],
                 'start_time' => $start->format('H:i:s'),
                 'end_time' => $end->format('H:i:s'),
@@ -61,6 +67,29 @@ class CreateBookingAction
         $this->sendCreatedNotifications($booking);
 
         return $booking;
+    }
+
+    private function assertTenantIntegrity(Service $service, Staff $staff): void
+    {
+        $tenantId = TenantManager::id();
+
+        if (! $tenantId) {
+            throw ValidationException::withMessages([
+                'business' => 'Le tenant actif est introuvable.',
+            ]);
+        }
+
+        if ((int) $service->business_id !== $tenantId) {
+            throw ValidationException::withMessages([
+                'service_id' => 'Le service sélectionné est invalide pour ce business.',
+            ]);
+        }
+
+        if ((int) $staff->business_id !== $tenantId) {
+            throw ValidationException::withMessages([
+                'staff_id' => 'L’employé sélectionné est invalide pour ce business.',
+            ]);
+        }
     }
 
     private function sendCreatedNotifications(Booking $booking): void
@@ -80,7 +109,7 @@ class CreateBookingAction
 
     private function resolveTimezone(): string
     {
-        $timezone = (string) \App\Core\Tenancy\TenantManager::timezone();
+        $timezone = (string) TenantManager::timezone();
 
         try {
             new DateTimeZone($timezone);
