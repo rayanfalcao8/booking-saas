@@ -5,6 +5,7 @@ use App\Domain\Booking\Actions\CreateBookingAction;
 use App\Domain\Booking\DTO\AvailabilityQuery;
 use App\Domain\Booking\Services\AvailabilityService;
 use App\Models\Business;
+use App\Core\Tenancy\TenantManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
@@ -39,8 +40,16 @@ Route::middleware([InitializeTenant::class])->group(function () {
 
     Route::post('/b/{business:slug}/book', function (Business $business, Request $request, CreateBookingAction $action) {
         $data = $request->validate([
-            'service_id' => ['required', 'integer', 'exists:services,id'],
-            'staff_id' => ['required', 'integer', 'exists:staff,id'],
+            'service_id' => [
+                'required',
+                'integer',
+                Rule::exists('services', 'id')->where(fn ($query) => $query->where('business_id', TenantManager::id())),
+            ],
+            'staff_id' => [
+                'required',
+                'integer',
+                Rule::exists('staff', 'id')->where(fn ($query) => $query->where('business_id', TenantManager::id())),
+            ],
             'date' => ['required', 'date_format:Y-m-d'],
             'start_time' => ['required', 'date_format:H:i'],
             'customer_name' => ['required', 'string', 'max:255'],
