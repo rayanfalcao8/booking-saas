@@ -63,6 +63,8 @@ class PublicBookingPageTest extends TestCase
             ->assertSee('Hair Cut')
             ->assertSee('Alice')
             ->assertDontSee('Massage')
-            ->assertDontSee('Bob');
+            ->assertDontSee('Bob')
+            ->assertSee('Agenda semaine')
+            ->assertSee('Par prestataire');
     }
 }

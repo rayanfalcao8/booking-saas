@@ -6,7 +6,6 @@
     <title>Réservation - {{ $business->name }}</title>
     <style>
         :root {
-            color-scheme: light;
             font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
 
@@ -17,7 +16,7 @@
         }
 
         .container {
-            max-width: 1100px;
+            max-width: 1180px;
             margin: 0 auto;
             padding: 24px;
         }
@@ -32,7 +31,7 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 12px;
             margin-bottom: 16px;
         }
@@ -61,13 +60,55 @@
             background: #fff;
         }
 
-        .agenda {
+        .actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .primary {
+            background: #0f172a;
+            color: #fff;
+            border: 0;
+            cursor: pointer;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin: 18px 0 12px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            border: 1px solid #cbd5e1;
+            border-radius: 999px;
+            padding: 6px 12px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .tab-btn.active {
+            border-color: #1d4ed8;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        .agenda-day {
             display: grid;
             grid-template-columns: 80px 1fr;
             gap: 10px;
-            margin-top: 20px;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 16px;
         }
 
         .hours,
@@ -95,6 +136,43 @@
             align-items: center;
         }
 
+        .week-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(130px, 1fr));
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        .week-col {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 8px;
+            min-height: 160px;
+            background: #f8fbff;
+        }
+
+        .week-col h4 {
+            margin: 0 0 8px;
+            font-size: 13px;
+        }
+
+        .provider-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .provider-row {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        .provider-row h4 {
+            margin: 0 0 8px;
+            font-size: 14px;
+        }
+
         .slot-btn {
             border: 1px solid #93c5fd;
             border-radius: 999px;
@@ -103,26 +181,13 @@
             padding: 6px 10px;
             cursor: pointer;
             font-size: 12px;
+            margin: 2px;
         }
 
         .slot-btn.selected {
             background: #1d4ed8;
             color: #fff;
             border-color: #1d4ed8;
-        }
-
-        .actions {
-            margin-top: 16px;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .primary {
-            background: #0f172a;
-            color: #fff;
-            cursor: pointer;
-            border: 0;
         }
 
         .message {
@@ -147,12 +212,12 @@
             display: block;
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 980px) {
             .grid {
                 grid-template-columns: 1fr;
             }
 
-            .agenda {
+            .agenda-day {
                 grid-template-columns: 1fr;
             }
 
@@ -165,7 +230,7 @@
 <body>
 <div class="container">
     <h1>Réserver chez {{ $business->name }}</h1>
-    <p>Sélectionne un service, un membre du staff et une date. Ensuite choisis ton créneau dans l'agenda.</p>
+    <p>Tu peux choisir la vue: journée, semaine, ou disponibilités par prestataire.</p>
 
     <div class="card">
         <div class="grid">
@@ -180,9 +245,9 @@
             </div>
 
             <div class="field">
-                <label for="staff_id">Staff</label>
+                <label for="staff_id">Prestataire (optionnel pour vue prestataires)</label>
                 <select id="staff_id">
-                    <option value="">Choisir</option>
+                    <option value="">Tous les prestataires</option>
                     @foreach($staffMembers as $staffMember)
                         <option value="{{ $staffMember->id }}">{{ $staffMember->name }}</option>
                     @endforeach
@@ -193,6 +258,15 @@
                 <label for="date">Date</label>
                 <input id="date" type="date">
             </div>
+
+            <div class="field">
+                <label for="view_mode">Vue</label>
+                <select id="view_mode">
+                    <option value="day">Agenda jour</option>
+                    <option value="week">Agenda semaine</option>
+                    <option value="providers">Par prestataire</option>
+                </select>
+            </div>
         </div>
 
         <div class="actions">
@@ -200,14 +274,30 @@
             <span id="selected-slot">Aucun créneau sélectionné</span>
         </div>
 
-        <div class="agenda">
-            <div class="hours" id="hours"></div>
-            <div class="slots" id="slots"></div>
+        <div class="tabs">
+            <button class="tab-btn active" data-view="day" type="button">Jour</button>
+            <button class="tab-btn" data-view="week" type="button">Semaine</button>
+            <button class="tab-btn" data-view="providers" type="button">Prestataires</button>
+        </div>
+
+        <div id="view-day" class="view active">
+            <div class="agenda-day">
+                <div class="hours" id="hours"></div>
+                <div class="slots" id="slots"></div>
+            </div>
+        </div>
+
+        <div id="view-week" class="view">
+            <div id="week-grid" class="week-grid"></div>
+        </div>
+
+        <div id="view-providers" class="view">
+            <div id="provider-grid" class="provider-grid"></div>
         </div>
 
         <hr style="margin: 18px 0; border: 0; border-top: 1px solid #e2e8f0;">
 
-        <div class="grid">
+        <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
             <div class="field">
                 <label for="customer_name">Nom</label>
                 <input id="customer_name" type="text" placeholder="Ton nom">
@@ -238,6 +328,7 @@
 <script>
     const availabilityUrl = @json($availabilityUrlTemplate);
     const bookingUrl = @json($bookingUrlTemplate);
+    const staffMembers = @json($staffMembers->map(fn ($staffMember) => ['id' => $staffMember->id, 'name' => $staffMember->name])->values());
 
     const loadSlotsButton = document.getElementById('load-slots');
     const confirmBookingButton = document.getElementById('confirm-booking');
@@ -245,6 +336,12 @@
     const messageBox = document.getElementById('message');
     const slotsContainer = document.getElementById('slots');
     const hoursContainer = document.getElementById('hours');
+    const weekGrid = document.getElementById('week-grid');
+    const providerGrid = document.getElementById('provider-grid');
+    const viewModeSelect = document.getElementById('view_mode');
+    const dateInput = document.getElementById('date');
+    const staffSelect = document.getElementById('staff_id');
+    const tabButtons = document.querySelectorAll('.tab-btn');
 
     let selectedSlot = null;
 
@@ -258,7 +355,20 @@
         messageBox.textContent = '';
     }
 
-    function drawAgendaRows() {
+    function setActiveView(mode) {
+        document.querySelectorAll('.view').forEach((view) => {
+            view.classList.remove('active');
+        });
+
+        tabButtons.forEach((button) => {
+            button.classList.toggle('active', button.dataset.view === mode);
+        });
+
+        document.getElementById(`view-${mode}`).classList.add('active');
+        viewModeSelect.value = mode;
+    }
+
+    function drawDayRows() {
         hoursContainer.innerHTML = '';
         slotsContainer.innerHTML = '';
 
@@ -278,53 +388,45 @@
     function readSelection() {
         return {
             service_id: document.getElementById('service_id').value,
-            staff_id: document.getElementById('staff_id').value,
-            date: document.getElementById('date').value,
+            staff_id: staffSelect.value,
+            date: dateInput.value,
+            view_mode: viewModeSelect.value,
         };
     }
 
-    function attachSlotButton(slot) {
-        const [hour] = slot.split(':');
-        const row = slotsContainer.querySelector(`[data-hour="${hour}"]`);
+    function selectSlot(slot, date, staffId) {
+        selectedSlot = slot;
+        selectedSlotLabel.textContent = `Créneau: ${date} ${slot}`;
 
-        if (!row) {
-            return;
+        dateInput.value = date;
+
+        if (staffId) {
+            staffSelect.value = String(staffId);
         }
 
+        document.querySelectorAll('.slot-btn').forEach((item) => {
+            item.classList.remove('selected');
+        });
+    }
+
+    function buildSlotButton(slot, date, staffId) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'slot-btn';
         button.textContent = slot;
 
         button.addEventListener('click', () => {
-            document.querySelectorAll('.slot-btn').forEach((item) => {
-                item.classList.remove('selected');
-            });
-
+            selectSlot(slot, date, staffId);
             button.classList.add('selected');
-            selectedSlot = slot;
-            selectedSlotLabel.textContent = `Créneau: ${slot}`;
         });
 
-        row.appendChild(button);
+        return button;
     }
 
-    async function loadSlots() {
-        clearMessage();
-        drawAgendaRows();
-        selectedSlot = null;
-        selectedSlotLabel.textContent = 'Aucun créneau sélectionné';
-
-        const { service_id, staff_id, date } = readSelection();
-
-        if (!service_id || !staff_id || !date) {
-            setMessage('error', 'Sélectionne le service, le staff et la date avant de charger les disponibilités.');
-            return;
-        }
-
+    async function fetchAvailability(serviceId, staffId, date) {
         const url = new URL(availabilityUrl, window.location.origin);
-        url.searchParams.set('service_id', service_id);
-        url.searchParams.set('staff_id', staff_id);
+        url.searchParams.set('service_id', serviceId);
+        url.searchParams.set('staff_id', staffId);
         url.searchParams.set('date', date);
 
         const response = await fetch(url, {
@@ -335,21 +437,131 @@
 
         const payload = await response.json();
 
-        if (!response.ok) {
-            setMessage('error', 'Impossible de récupérer les disponibilités. Vérifie les données.');
-            return;
+        if (!response.ok || !Array.isArray(payload.slots)) {
+            return [];
         }
 
-        if (!Array.isArray(payload.slots) || payload.slots.length === 0) {
+        return payload.slots;
+    }
+
+    function addDays(baseDate, amount) {
+        const date = new Date(baseDate + 'T00:00:00');
+        date.setDate(date.getDate() + amount);
+        return date.toISOString().slice(0, 10);
+    }
+
+    async function renderDayView(serviceId, staffId, date) {
+        drawDayRows();
+
+        const slots = await fetchAvailability(serviceId, staffId, date);
+
+        slots.forEach((slot) => {
+            const [hour] = slot.split(':');
+            const row = slotsContainer.querySelector(`[data-hour="${hour}"]`);
+
+            if (row) {
+                row.appendChild(buildSlotButton(slot, date, staffId));
+            }
+        });
+
+        if (slots.length === 0) {
             setMessage('error', 'Aucune disponibilité sur cette date.');
             return;
         }
 
-        payload.slots.forEach((slot) => {
-            attachSlotButton(slot);
-        });
+        setMessage('success', `${slots.length} créneau(x) trouvé(s) sur la journée.`);
+    }
 
-        setMessage('success', `${payload.slots.length} créneau(x) disponible(s).`);
+    async function renderWeekView(serviceId, staffId, date) {
+        weekGrid.innerHTML = '';
+
+        const days = [0, 1, 2, 3, 4, 5, 6].map((offset) => addDays(date, offset));
+
+        for (const day of days) {
+            const col = document.createElement('div');
+            col.className = 'week-col';
+
+            const title = document.createElement('h4');
+            title.textContent = day;
+            col.appendChild(title);
+
+            const slots = await fetchAvailability(serviceId, staffId, day);
+
+            if (slots.length === 0) {
+                const empty = document.createElement('p');
+                empty.style.fontSize = '12px';
+                empty.textContent = 'Aucun créneau';
+                col.appendChild(empty);
+            } else {
+                slots.forEach((slot) => {
+                    col.appendChild(buildSlotButton(slot, day, staffId));
+                });
+            }
+
+            weekGrid.appendChild(col);
+        }
+
+        setMessage('success', 'Vue semaine chargée.');
+    }
+
+    async function renderProviderView(serviceId, date) {
+        providerGrid.innerHTML = '';
+
+        for (const staffMember of staffMembers) {
+            const row = document.createElement('div');
+            row.className = 'provider-row';
+
+            const title = document.createElement('h4');
+            title.textContent = staffMember.name;
+            row.appendChild(title);
+
+            const slots = await fetchAvailability(serviceId, staffMember.id, date);
+
+            if (slots.length === 0) {
+                const empty = document.createElement('p');
+                empty.style.fontSize = '12px';
+                empty.textContent = 'Aucune disponibilité';
+                row.appendChild(empty);
+            } else {
+                slots.forEach((slot) => {
+                    row.appendChild(buildSlotButton(slot, date, staffMember.id));
+                });
+            }
+
+            providerGrid.appendChild(row);
+        }
+
+        setMessage('success', 'Disponibilités par prestataire chargées.');
+    }
+
+    async function loadSlots() {
+        clearMessage();
+        selectedSlot = null;
+        selectedSlotLabel.textContent = 'Aucun créneau sélectionné';
+
+        const { service_id, staff_id, date, view_mode } = readSelection();
+
+        if (!service_id || !date) {
+            setMessage('error', 'Service et date sont requis.');
+            return;
+        }
+
+        if ((view_mode === 'day' || view_mode === 'week') && !staff_id) {
+            setMessage('error', 'Choisis un prestataire pour les vues jour/semaine.');
+            return;
+        }
+
+        if (view_mode === 'day') {
+            await renderDayView(service_id, staff_id, date);
+            return;
+        }
+
+        if (view_mode === 'week') {
+            await renderWeekView(service_id, staff_id, date);
+            return;
+        }
+
+        await renderProviderView(service_id, date);
     }
 
     async function confirmBooking() {
@@ -362,7 +574,7 @@
         const notes = document.getElementById('notes').value;
 
         if (!service_id || !staff_id || !date || !selectedSlot || !customerName) {
-            setMessage('error', 'Service, staff, date, créneau et nom client sont requis.');
+            setMessage('error', 'Service, prestataire, date, créneau et nom sont requis.');
             return;
         }
 
@@ -387,18 +599,25 @@
         const payload = await response.json();
 
         if (!response.ok) {
-            const errorText = payload?.message || 'La réservation a échoué.';
-            setMessage('error', errorText);
+            const firstError = payload?.errors ? Object.values(payload.errors)[0]?.[0] : null;
+            setMessage('error', firstError || payload?.message || 'La réservation a échoué.');
             return;
         }
 
-        setMessage('success', `Réservation confirmée (#${payload.id}). Un email sera envoyé si configuré.`);
-        selectedSlot = null;
-        selectedSlotLabel.textContent = 'Aucun créneau sélectionné';
-        drawAgendaRows();
+        setMessage('success', `Réservation confirmée (#${payload.id}).`);
     }
 
-    drawAgendaRows();
+    tabButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            setActiveView(button.dataset.view);
+        });
+    });
+
+    viewModeSelect.addEventListener('change', (event) => {
+        setActiveView(event.target.value);
+    });
+
+    drawDayRows();
     loadSlotsButton.addEventListener('click', loadSlots);
     confirmBookingButton.addEventListener('click', confirmBooking);
 </script>
