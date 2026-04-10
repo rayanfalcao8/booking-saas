@@ -5,6 +5,7 @@ namespace Tests\Feature\Api;
 use App\Models\Business;
 use App\Models\Service;
 use App\Models\Staff;
+use App\Models\StaffSchedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -105,6 +106,15 @@ class BookEndpointTenantIsolationTest extends TestCase
             'name' => 'Jane',
             'email' => $email,
             'is_active' => true,
+        ]);
+
+
+        StaffSchedule::query()->create([
+            'business_id' => $business->id,
+            'staff_id' => $staff->id,
+            'day_of_week' => 2,
+            'start_time' => '08:00:00',
+            'end_time' => '18:00:00',
         ]);
 
         return [$business, $service, $staff];
