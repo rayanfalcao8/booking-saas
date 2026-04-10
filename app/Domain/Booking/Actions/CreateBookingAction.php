@@ -15,6 +15,7 @@ use DateTimeInterface;
 use DateTimeZone;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -69,6 +70,7 @@ class CreateBookingAction
                 'customer_phone' => $data['customer_phone'] ?? null,
                 'notes' => $data['notes'] ?? null,
                 'status' => 'confirmed',
+                'cancellation_token' => Str::random(48),
             ]);
         });
 

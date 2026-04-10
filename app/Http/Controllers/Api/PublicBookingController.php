@@ -8,8 +8,10 @@ use App\Domain\Booking\Services\AvailabilityService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicAvailabilityRequest;
 use App\Http\Requests\PublicBookRequest;
+use App\Models\Booking;
 use App\Models\Business;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class PublicBookingController extends Controller
 {
@@ -38,4 +40,35 @@ class PublicBookingController extends Controller
             'status' => $booking->status,
         ], 201);
     }
+
+    public function cancel(Business $business, Booking $booking, Request $request): JsonResponse
+    {
+        $token = (string) $request->input('token', '');
+
+        if ($token === '' || ! hash_equals((string) $booking->cancellation_token, $token)) {
+            return response()->json([
+                'message' => 'Lien d’annulation invalide.',
+            ], 422);
+        }
+
+        if ($booking->status === 'canceled') {
+            return response()->json([
+                'id' => $booking->id,
+                'status' => $booking->status,
+                'message' => 'La réservation est déjà annulée.',
+            ]);
+        }
+
+        $booking->forceFill([
+            'status' => 'canceled',
+            'canceled_at' => now(),
+        ])->save();
+
+        return response()->json([
+            'id' => $booking->id,
+            'status' => $booking->status,
+            'message' => 'Réservation annulée avec succès.',
+        ]);
+    }
 }
+

@@ -10,4 +10,7 @@ Route::middleware([InitializeTenant::class])->group(function () {
 
     Route::post('/b/{business:slug}/book', [PublicBookingController::class, 'book'])
         ->name('api.public.book');
+
+    Route::post('/b/{business:slug}/book/{booking}/cancel', [PublicBookingController::class, 'cancel'])
+        ->name('api.public.book.cancel');
 });
