@@ -36,7 +36,7 @@ Route::middleware([InitializeTenant::class])->group(function () {
         return response()->json([
             'slots' => $svc->slots($q),
         ]);
-    });
+    })->name('api.public.availability');
 
     Route::post('/b/{business:slug}/book', function (Business $business, Request $request, CreateBookingAction $action) {
         $data = $request->validate([
@@ -64,6 +64,6 @@ Route::middleware([InitializeTenant::class])->group(function () {
             'id' => $booking->id,
             'status' => $booking->status,
         ], 201);
-    });
+    })->name('api.public.book');
 
 });
