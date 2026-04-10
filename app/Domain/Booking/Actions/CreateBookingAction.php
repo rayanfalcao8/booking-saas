@@ -6,6 +6,7 @@ use App\Core\Tenancy\TenantManager;
 use App\Models\Booking;
 use App\Models\Service;
 use App\Models\Staff;
+use App\Models\StaffSchedule;
 use App\Notifications\BusinessBookingCreated;
 use App\Notifications\CustomerBookingConfirmed;
 use Carbon\Carbon;
@@ -32,6 +33,14 @@ class CreateBookingAction
             $timezone = $this->resolveTimezone();
             $start = $this->parseStartTime($data['start_time'], $timezone);
             $end = $start->copy()->addMinutes($duration);
+
+            $this->assertWithinStaffSchedule(
+                staffId: (int) $data['staff_id'],
+                date: (string) $data['date'],
+                start: $start,
+                end: $end,
+                timezone: $timezone,
+            );
 
             $collision = Booking::query()
                 ->where('staff_id', $data['staff_id'])
@@ -88,6 +97,25 @@ class CreateBookingAction
         if ((int) $staff->business_id !== $tenantId) {
             throw ValidationException::withMessages([
                 'staff_id' => 'L’employé sélectionné est invalide pour ce business.',
+            ]);
+        }
+    }
+
+
+    private function assertWithinStaffSchedule(int $staffId, string $date, Carbon $start, Carbon $end, string $timezone): void
+    {
+        $dayOfWeek = Carbon::createFromFormat('Y-m-d', $date, $timezone)->dayOfWeek;
+
+        $hasMatchingSchedule = StaffSchedule::query()
+            ->where('staff_id', $staffId)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('start_time', '<=', $start->format('H:i:s'))
+            ->where('end_time', '>=', $end->format('H:i:s'))
+            ->exists();
+
+        if (! $hasMatchingSchedule) {
+            throw ValidationException::withMessages([
+                'start_time' => 'Ce créneau est hors horaires du prestataire.',
             ]);
         }
     }
