@@ -2,6 +2,7 @@
 
 use App\Core\Tenancy\Middleware\InitializeTenant;
 use App\Core\Tenancy\TenantManager;
+use App\Http\Controllers\PublicBookingPageController;
 use App\Models\Business;
 use Illuminate\Support\Facades\Route;
 
@@ -14,6 +15,9 @@ Route::middleware([InitializeTenant::class])->group(function () {
             'business_name' => TenantManager::get()?->name,
         ]);
     });
+
+    Route::get('/b/{business:slug}/book', PublicBookingPageController::class)
+        ->name('public.booking.page');
 
 });
 
