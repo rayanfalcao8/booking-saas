@@ -7,6 +7,7 @@ use App\Domain\Booking\Actions\CreateBookingAction;
 use App\Models\Business;
 use App\Models\Service;
 use App\Models\Staff;
+use App\Models\StaffSchedule;
 use App\Notifications\BusinessBookingCreated;
 use App\Notifications\CustomerBookingConfirmed;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -99,6 +100,14 @@ class CreateBookingActionNotificationsTest extends TestCase
             'name' => 'Jane',
             'email' => 'jane@example.com',
             'is_active' => true,
+        ]);
+
+        StaffSchedule::query()->create([
+            'business_id' => $business->id,
+            'staff_id' => $staff->id,
+            'day_of_week' => 2,
+            'start_time' => '08:00:00',
+            'end_time' => '18:00:00',
         ]);
 
         return [$business, $service, $staff];

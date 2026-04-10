@@ -21,8 +21,17 @@ class Booking extends Model
         'customer_email',
         'customer_phone',
         'status',
+        'cancellation_token',
+        'canceled_at',
         'notes',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'canceled_at' => 'datetime',
+        ];
+    }
 
     public function service(): BelongsTo
     {

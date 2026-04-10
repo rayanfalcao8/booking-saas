@@ -33,14 +33,26 @@ class CustomerBookingConfirmed extends Notification implements ShouldQueue
             ? $this->booking->date->format('Y-m-d')
             : (string) $this->booking->date;
 
-        return (new MailMessage)
+        $message = (new MailMessage)
             ->subject('Confirmation de votre booking')
             ->greeting('Bonjour '.$this->booking->customer_name.',')
             ->line('Votre booking est confirme.')
             ->line('Service: '.($this->booking->service?->name ?? '-'))
             ->line('Date: '.$bookingDate)
-            ->line('Heure: '.$this->booking->start_time.' - '.$this->booking->end_time)
-            ->line('Merci pour votre confiance.');
+            ->line('Heure: '.$this->booking->start_time.' - '.$this->booking->end_time);
+
+        if (is_string($this->booking->cancellation_token) && $this->booking->cancellation_token !== '') {
+            $cancelUrl = route('public.booking.cancel', [
+                'business' => $this->booking->business?->slug,
+                'booking' => $this->booking->id,
+                'token' => $this->booking->cancellation_token,
+            ]);
+
+            $message->line('Besoin d’annuler ? Utilisez le lien ci-dessous.')
+                ->action('Annuler ma réservation', $cancelUrl);
+        }
+
+        return $message->line('Merci pour votre confiance.');
     }
 
     /**
