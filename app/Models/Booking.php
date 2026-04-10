@@ -21,8 +21,33 @@ class Booking extends Model
         'customer_email',
         'customer_phone',
         'status',
+        'cancellation_token',
+        'canceled_at',
+        'cancellation_expires_at',
         'notes',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'canceled_at' => 'datetime',
+            'cancellation_expires_at' => 'datetime',
+        ];
+    }
+
+
+    public function isCancellationTokenValid(string $token): bool
+    {
+        if ($this->cancellation_token === null || ! hash_equals((string) $this->cancellation_token, $token)) {
+            return false;
+        }
+
+        if ($this->cancellation_expires_at !== null && now()->greaterThan($this->cancellation_expires_at)) {
+            return false;
+        }
+
+        return true;
+    }
 
     public function service(): BelongsTo
     {
