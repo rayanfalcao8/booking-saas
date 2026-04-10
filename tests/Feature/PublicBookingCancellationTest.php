@@ -58,6 +58,47 @@ class PublicBookingCancellationTest extends TestCase
         ]);
     }
 
+
+    public function test_it_prevents_canceling_booking_from_another_tenant_slug(): void
+    {
+        [$business, $booking] = $this->seedBooking();
+
+        $otherBusiness = Business::query()->create([
+            'name' => 'Other Studio',
+            'slug' => 'other-studio',
+            'timezone' => 'America/Montreal',
+        ]);
+
+        $response = $this->postJson("/api/b/{$otherBusiness->slug}/book/{$booking->id}/cancel", [
+            'token' => $booking->cancellation_token,
+        ]);
+
+        $response->assertNotFound();
+
+        $this->assertDatabaseHas('bookings', [
+            'id' => $booking->id,
+            'status' => 'confirmed',
+        ]);
+    }
+
+
+    public function test_it_rejects_expired_cancellation_token(): void
+    {
+        [$business, $booking] = $this->seedBooking();
+
+        $booking->forceFill([
+            'cancellation_expires_at' => now()->subMinute(),
+        ])->save();
+
+        $response = $this->postJson("/api/b/{$business->slug}/book/{$booking->id}/cancel", [
+            'token' => $booking->cancellation_token,
+        ]);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Lien d’annulation invalide ou expiré.');
+    }
+
     public function test_it_cancels_booking_from_public_api_endpoint(): void
     {
         [$business, $booking] = $this->seedBooking();

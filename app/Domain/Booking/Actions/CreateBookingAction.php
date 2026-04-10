@@ -71,6 +71,7 @@ class CreateBookingAction
                 'notes' => $data['notes'] ?? null,
                 'status' => 'confirmed',
                 'cancellation_token' => Str::random(48),
+                'cancellation_expires_at' => $start->copy(),
             ]);
         });
 

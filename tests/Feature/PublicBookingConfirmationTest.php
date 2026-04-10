@@ -38,6 +38,24 @@ class PublicBookingConfirmationTest extends TestCase
             ->assertSee('Annuler cette réservation');
     }
 
+
+    public function test_it_returns_not_found_for_expired_confirmation_token(): void
+    {
+        [$business, $booking] = $this->seedBooking();
+
+        $booking->forceFill([
+            'cancellation_expires_at' => now()->subMinute(),
+        ])->save();
+
+        $response = $this->get(route('public.booking.confirmation', [
+            'business' => $business->slug,
+            'booking' => $booking->id,
+            'token' => $booking->cancellation_token,
+        ]));
+
+        $response->assertNotFound();
+    }
+
     public function test_it_returns_not_found_for_invalid_confirmation_token(): void
     {
         [$business, $booking] = $this->seedBooking();

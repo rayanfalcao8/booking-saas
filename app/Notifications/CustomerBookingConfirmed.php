@@ -48,7 +48,7 @@ class CustomerBookingConfirmed extends Notification implements ShouldQueue
                 'token' => $this->booking->cancellation_token,
             ]);
 
-            $message->line('Besoin d’annuler ? Utilisez le lien ci-dessous.')
+            $message->line('Besoin d’annuler ? Utilisez le lien ci-dessous avant l’heure du rendez-vous.')
                 ->action('Annuler ma réservation', $cancelUrl);
         }
 

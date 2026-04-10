@@ -10,10 +10,7 @@ class PublicBookingConfirmationController extends Controller
 {
     public function __invoke(Business $business, Booking $booking, string $token): View
     {
-        $isValidToken = $booking->cancellation_token !== null
-            && hash_equals((string) $booking->cancellation_token, $token);
-
-        if (! $isValidToken) {
+        if (! $booking->isCancellationTokenValid($token)) {
             abort(404);
         }
 
