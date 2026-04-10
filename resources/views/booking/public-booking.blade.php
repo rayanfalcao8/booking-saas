@@ -605,6 +605,10 @@
         }
 
         setMessage('success', `Réservation confirmée (#${payload.id}).`);
+
+        if (typeof payload.confirmation_url === 'string' && payload.confirmation_url !== '') {
+            window.location.href = payload.confirmation_url;
+        }
     }
 
     tabButtons.forEach((button) => {

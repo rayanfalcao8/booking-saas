@@ -38,6 +38,11 @@ class PublicBookingController extends Controller
         return response()->json([
             'id' => $booking->id,
             'status' => $booking->status,
+            'confirmation_url' => route('public.booking.confirmation', [
+                'business' => $business->slug,
+                'booking' => $booking->id,
+                'token' => $booking->cancellation_token,
+            ]),
         ], 201);
     }
 

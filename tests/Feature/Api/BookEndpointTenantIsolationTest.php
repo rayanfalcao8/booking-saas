@@ -48,7 +48,8 @@ class BookEndpointTenantIsolationTest extends TestCase
 
         $response
             ->assertCreated()
-            ->assertJsonPath('status', 'confirmed');
+            ->assertJsonPath('status', 'confirmed')
+            ->assertJsonStructure(['id', 'status', 'confirmation_url']);
 
         $bookingId = (int) $response->json('id');
 

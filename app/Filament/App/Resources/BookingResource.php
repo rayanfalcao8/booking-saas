@@ -69,6 +69,7 @@ class BookingResource extends Resource
                         ->options([
                             'confirmed' => 'Confirmé',
                             'canceled' => 'Annulé',
+                            'no_show' => 'No-show',
                         ])
                         ->default('confirmed'),
                 ])
@@ -139,8 +140,14 @@ class BookingResource extends Resource
                     ->colors([
                         'success' => 'confirmed',
                         'danger' => 'canceled',
+                        'warning' => 'no_show',
                     ])
-                    ->formatStateUsing(fn (string $state) => $state === 'confirmed' ? 'Confirmé' : 'Annulé'),
+                    ->formatStateUsing(fn (string $state) => match ($state) {
+                        'confirmed' => 'Confirmé',
+                        'canceled' => 'Annulé',
+                        'no_show' => 'No-show',
+                        default => $state,
+                    }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()->label('Modifier'),
