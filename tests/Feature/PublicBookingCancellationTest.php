@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Carbon\Carbon;
 use App\Core\Tenancy\TenantManager;
 use App\Domain\Booking\Actions\CreateBookingAction;
 use App\Models\Business;
@@ -149,7 +150,7 @@ class PublicBookingCancellationTest extends TestCase
         $booking = app(CreateBookingAction::class)->run([
             'service_id' => $service->id,
             'staff_id' => $staff->id,
-            'date' => '2026-03-10',
+            'date' => Carbon::now('America/Montreal')->next(Carbon::TUESDAY)->format('Y-m-d'),
             'start_time' => '09:00',
             'customer_name' => 'Client Cancel',
             'customer_email' => 'client@example.com',

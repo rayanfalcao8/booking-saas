@@ -49,6 +49,12 @@ class PublicBookingController extends Controller
 
     public function cancel(Business $business, Booking $booking, Request $request, UpdateBookingStatusAction $updateBookingStatusAction): JsonResponse
     {
+        if ((int) $booking->business_id != (int) $business->id) {
+            return response()->json([
+                'message' => 'Réservation introuvable.',
+            ], 404);
+        }
+
         $token = (string) $request->input('token', '');
 
         if ($token === '' || ! $booking->isCancellationTokenValid($token)) {

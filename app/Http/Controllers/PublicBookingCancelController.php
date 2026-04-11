@@ -12,6 +12,13 @@ class PublicBookingCancelController extends Controller
 {
     public function __invoke(Business $business, Booking $booking, string $token, UpdateBookingStatusAction $updateBookingStatusAction): View
     {
+        if ((int) $booking->business_id != (int) $business->id) {
+            return view('booking.cancel-result', [
+                'status' => 'error',
+                'message' => 'Réservation introuvable.',
+            ]);
+        }
+
         if (! $booking->isCancellationTokenValid($token)) {
             return view('booking.cancel-result', [
                 'status' => 'error',
