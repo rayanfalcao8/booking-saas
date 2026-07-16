@@ -13,6 +13,11 @@ class AvailabilityService
     public function slots(AvailabilityQuery $q): array
     {
         $service = Service::query()->findOrFail($q->serviceId);
+
+        if (! $service->is_active) {
+            return [];
+        }
+
         $duration = (int) $service->duration_min + (int) $service->buffer_min;
 
         $tz = \App\Core\Tenancy\TenantManager::timezone();
@@ -31,7 +36,7 @@ class AvailabilityService
         $existing = Booking::query()
             ->where('staff_id', $q->staffId)
             ->where('date', $q->date)
-            ->where('status', 'confirmed')
+            ->where('status', '!=', 'canceled')
             ->get(['start_time', 'end_time']);
 
         $busy = $existing->map(fn ($b) => [

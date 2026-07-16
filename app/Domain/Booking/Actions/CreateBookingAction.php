@@ -2,76 +2,39 @@
 
 namespace App\Domain\Booking\Actions;
 
-use App\Core\Tenancy\TenantManager;
+use App\Domain\Booking\Services\BookingValidationService;
 use App\Models\Booking;
-use App\Models\Service;
-use App\Models\Staff;
-use App\Models\StaffSchedule;
 use App\Notifications\BusinessBookingCreated;
 use App\Notifications\CustomerBookingConfirmed;
-use Carbon\Carbon;
-use Carbon\CarbonInterface;
-use DateTimeInterface;
-use DateTimeZone;
+use Illuminate\Notifications\Notification as NotificationMessage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class CreateBookingAction
 {
+    public function __construct(private BookingValidationService $bookingValidationService) {}
+
     public function run(array $data): Booking
     {
         $booking = DB::transaction(function () use ($data) {
-            $service = Service::query()->findOrFail($data['service_id']);
-            $staff = Staff::query()->findOrFail($data['staff_id']);
-
-            $this->assertTenantIntegrity($service, $staff);
-
-            $duration = (int) $service->duration_min + (int) $service->buffer_min;
-
-            $timezone = $this->resolveTimezone();
-            $start = $this->parseStartTime($data['start_time'], $timezone);
-            $end = $start->copy()->addMinutes($duration);
-
-            $this->assertWithinStaffSchedule(
-                staffId: (int) $data['staff_id'],
-                date: (string) $data['date'],
-                start: $start,
-                end: $end,
-                timezone: $timezone,
-            );
-
-            $collision = Booking::query()
-                ->where('staff_id', $data['staff_id'])
-                ->where('date', $data['date'])
-                ->where('status', 'confirmed')
-                ->where(function ($q) use ($start, $end) {
-                    $q->where('start_time', '<', $end->format('H:i:s'))
-                        ->where('end_time', '>', $start->format('H:i:s'));
-                })
-                ->exists();
-
-            if ($collision) {
-                throw ValidationException::withMessages([
-                    'start_time' => 'Ce créneau n’est plus disponible.',
-                ]);
-            }
+            $validated = $this->bookingValidationService->validate($data);
 
             return Booking::query()->create([
-                'service_id' => $data['service_id'],
-                'staff_id' => $staff->id,
-                'date' => $data['date'],
-                'start_time' => $start->format('H:i:s'),
-                'end_time' => $end->format('H:i:s'),
+                'service_id' => $validated['service']->id,
+                'staff_id' => $validated['staff']->id,
+                'date' => $validated['date'],
+                'start_time' => $validated['start_time'],
+                'end_time' => $validated['end_time'],
                 'customer_name' => $data['customer_name'],
                 'customer_email' => $data['customer_email'] ?? null,
                 'customer_phone' => $data['customer_phone'] ?? null,
                 'notes' => $data['notes'] ?? null,
                 'status' => 'confirmed',
                 'cancellation_token' => Str::random(48),
-                'cancellation_expires_at' => $start->copy(),
+                'cancellation_expires_at' => $validated['cancellation_expires_at'],
             ]);
         });
 
@@ -81,110 +44,43 @@ class CreateBookingAction
         return $booking;
     }
 
-    private function assertTenantIntegrity(Service $service, Staff $staff): void
-    {
-        $tenantId = TenantManager::id();
-
-        if (! $tenantId) {
-            throw ValidationException::withMessages([
-                'business' => 'Le tenant actif est introuvable.',
-            ]);
-        }
-
-        if ((int) $service->business_id !== $tenantId) {
-            throw ValidationException::withMessages([
-                'service_id' => 'Le service sélectionné est invalide pour ce business.',
-            ]);
-        }
-
-        if ((int) $staff->business_id !== $tenantId) {
-            throw ValidationException::withMessages([
-                'staff_id' => 'L’employé sélectionné est invalide pour ce business.',
-            ]);
-        }
-    }
-
-
-    private function assertWithinStaffSchedule(int $staffId, string $date, Carbon $start, Carbon $end, string $timezone): void
-    {
-        $dayOfWeek = Carbon::createFromFormat('Y-m-d', $date, $timezone)->dayOfWeek;
-
-        $hasMatchingSchedule = StaffSchedule::query()
-            ->where('staff_id', $staffId)
-            ->where('day_of_week', $dayOfWeek)
-            ->where('start_time', '<=', $start->format('H:i:s'))
-            ->where('end_time', '>=', $end->format('H:i:s'))
-            ->exists();
-
-        if (! $hasMatchingSchedule) {
-            throw ValidationException::withMessages([
-                'start_time' => 'Ce créneau est hors horaires du prestataire.',
-            ]);
-        }
-    }
-
     private function sendCreatedNotifications(Booking $booking): void
     {
-        $businessEmail = $booking->business?->email;
+        $this->sendMailNotification(
+            recipientEmail: $booking->business?->email,
+            notification: new BusinessBookingCreated($booking),
+            audience: 'business',
+            booking: $booking,
+        );
 
-        if (is_string($businessEmail) && $businessEmail !== '') {
-            Notification::route('mail', $businessEmail)
-                ->notify(new BusinessBookingCreated($booking));
-        }
-
-        if (is_string($booking->customer_email) && $booking->customer_email !== '') {
-            Notification::route('mail', $booking->customer_email)
-                ->notify(new CustomerBookingConfirmed($booking));
-        }
+        $this->sendMailNotification(
+            recipientEmail: $booking->customer_email,
+            notification: new CustomerBookingConfirmed($booking),
+            audience: 'customer',
+            booking: $booking,
+        );
     }
 
-    private function resolveTimezone(): string
-    {
-        $timezone = (string) TenantManager::timezone();
+    private function sendMailNotification(
+        ?string $recipientEmail,
+        NotificationMessage $notification,
+        string $audience,
+        Booking $booking,
+    ): void {
+        if (! is_string($recipientEmail) || $recipientEmail === '') {
+            return;
+        }
 
         try {
-            new DateTimeZone($timezone);
-        } catch (Throwable) {
-            return (string) config('app.timezone', 'UTC');
-        }
-
-        return $timezone;
-    }
-
-    private function parseStartTime(mixed $rawStartTime, string $timezone): Carbon
-    {
-        if ($rawStartTime instanceof CarbonInterface) {
-            return Carbon::instance($rawStartTime->toDateTimeImmutable())
-                ->setTimezone($timezone);
-        }
-
-        if ($rawStartTime instanceof DateTimeInterface) {
-            return Carbon::instance($rawStartTime)
-                ->setTimezone($timezone);
-        }
-
-        if (! is_string($rawStartTime)) {
-            throw ValidationException::withMessages([
-                'start_time' => 'Le format de l’heure de début est invalide.',
+            Notification::route('mail', $recipientEmail)
+                ->notifyNow($notification);
+        } catch (Throwable $exception) {
+            Log::warning('Booking notification delivery failed.', [
+                'booking_id' => $booking->id,
+                'audience' => $audience,
+                'recipient_email' => $recipientEmail,
+                'exception' => $exception->getMessage(),
             ]);
         }
-
-        $startTime = trim($rawStartTime);
-        $formats = ['H:i:s', 'H:i'];
-
-        foreach ($formats as $format) {
-            try {
-                $start = Carbon::createFromFormat($format, $startTime, $timezone);
-
-                if ($start !== false) {
-                    return $start;
-                }
-            } catch (Throwable) {
-            }
-        }
-
-        throw ValidationException::withMessages([
-            'start_time' => 'Le format de l’heure de début est invalide.',
-        ]);
     }
 }

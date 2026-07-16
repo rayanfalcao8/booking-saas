@@ -6,7 +6,10 @@ use App\Models\Business;
 use App\Models\Service;
 use App\Models\Staff;
 use App\Models\StaffSchedule;
+use Illuminate\Contracts\Notifications\Dispatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 class BookEndpointTenantIsolationTest extends TestCase
@@ -31,7 +34,6 @@ class BookEndpointTenantIsolationTest extends TestCase
             ->assertStatus(422)
             ->assertJsonValidationErrors('service_id');
     }
-
 
     public function test_it_creates_booking_for_current_tenant_with_success_status(): void
     {
@@ -59,6 +61,39 @@ class BookEndpointTenantIsolationTest extends TestCase
             'service_id' => $service->id,
             'staff_id' => $staff->id,
             'customer_name' => 'Client Success',
+            'status' => 'confirmed',
+        ]);
+    }
+
+    public function test_it_still_returns_created_when_notification_delivery_fails(): void
+    {
+        [$business, $service, $staff] = $this->seedBusinessWithCatalog('studio-four', 'service-four@example.com');
+
+        $dispatcher = Mockery::mock(Dispatcher::class);
+        $dispatcher->shouldReceive('sendNow')
+            ->twice()
+            ->andThrow(new RuntimeException('Mail transport unavailable.'));
+
+        $this->app->instance(Dispatcher::class, $dispatcher);
+
+        $response = $this->postJson("/api/b/{$business->slug}/book", [
+            'service_id' => $service->id,
+            'staff_id' => $staff->id,
+            'date' => '2026-03-10',
+            'start_time' => '11:00',
+            'customer_name' => 'Client Resilient',
+            'customer_email' => 'resilient@example.com',
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('status', 'confirmed');
+
+        $this->assertDatabaseHas('bookings', [
+            'business_id' => $business->id,
+            'service_id' => $service->id,
+            'staff_id' => $staff->id,
+            'customer_email' => 'resilient@example.com',
             'status' => 'confirmed',
         ]);
     }
@@ -108,7 +143,6 @@ class BookEndpointTenantIsolationTest extends TestCase
             'email' => $email,
             'is_active' => true,
         ]);
-
 
         StaffSchedule::query()->create([
             'business_id' => $business->id,

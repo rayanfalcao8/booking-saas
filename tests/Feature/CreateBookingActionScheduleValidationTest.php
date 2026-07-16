@@ -59,6 +59,8 @@ class CreateBookingActionScheduleValidationTest extends TestCase
             'staff_id' => $staff->id,
             'status' => 'confirmed',
         ]);
+
+        $this->assertSame('2026-03-09', $booking->cancellation_expires_at?->timezone('America/Montreal')->format('Y-m-d'));
     }
 
     private function seedBookingContext(): array

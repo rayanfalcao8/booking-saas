@@ -33,13 +33,7 @@ class CustomerBookingConfirmed extends Notification implements ShouldQueue
             ? $this->booking->date->format('Y-m-d')
             : (string) $this->booking->date;
 
-        $message = (new MailMessage)
-            ->subject('Confirmation de votre booking')
-            ->greeting('Bonjour '.$this->booking->customer_name.',')
-            ->line('Votre booking est confirme.')
-            ->line('Service: '.($this->booking->service?->name ?? '-'))
-            ->line('Date: '.$bookingDate)
-            ->line('Heure: '.$this->booking->start_time.' - '.$this->booking->end_time);
+        $cancelUrl = null;
 
         if (is_string($this->booking->cancellation_token) && $this->booking->cancellation_token !== '') {
             $cancelUrl = route('public.booking.cancel', [
@@ -47,12 +41,26 @@ class CustomerBookingConfirmed extends Notification implements ShouldQueue
                 'booking' => $this->booking->id,
                 'token' => $this->booking->cancellation_token,
             ]);
-
-            $message->line('Besoin d’annuler ? Utilisez le lien ci-dessous avant l’heure du rendez-vous.')
-                ->action('Annuler ma réservation', $cancelUrl);
         }
 
-        return $message->line('Merci pour votre confiance.');
+        $confirmationUrl = route('public.booking.confirmation', [
+            'business' => $this->booking->business?->slug,
+            'booking' => $this->booking->id,
+            'token' => $this->booking->cancellation_token,
+        ]);
+
+        return (new MailMessage)
+            ->mailer('failover')
+            ->subject('Confirmation de votre réservation')
+            ->markdown('mail.bookings.customer-confirmed', [
+                'booking' => $this->booking,
+                'bookingDate' => $bookingDate,
+                'serviceName' => $this->booking->service?->name ?? '-',
+                'staffName' => $this->booking->staff?->name ?? '-',
+                'businessName' => $this->booking->business?->name ?? config('app.name'),
+                'confirmationUrl' => $confirmationUrl,
+                'cancelUrl' => $cancelUrl,
+            ]);
     }
 
     /**

@@ -23,9 +23,13 @@ class UpdateBookingStatusAction
             ]);
         }
 
-        $allowedTargets = ['canceled', 'no_show'];
+        if ($currentStatus === 'completed') {
+            throw ValidationException::withMessages([
+                'status' => 'Une réservation terminée ne peut plus changer de statut.',
+            ]);
+        }
 
-        if (! in_array($targetStatus, $allowedTargets, true)) {
+        if (! in_array($targetStatus, $this->allowedTargetsFrom($currentStatus), true)) {
             throw ValidationException::withMessages([
                 'status' => 'Transition de statut non autorisée.',
             ]);
@@ -34,6 +38,12 @@ class UpdateBookingStatusAction
         if ($targetStatus === 'no_show' && ! $this->hasBookingStarted($booking)) {
             throw ValidationException::withMessages([
                 'status' => 'Le statut no-show est autorisé uniquement après l’heure prévue.',
+            ]);
+        }
+
+        if ($targetStatus === 'completed' && ! $this->hasBookingEnded($booking)) {
+            throw ValidationException::withMessages([
+                'status' => 'Le statut terminé est autorisé uniquement après la fin prévue.',
             ]);
         }
 
@@ -48,14 +58,40 @@ class UpdateBookingStatusAction
         return $booking->refresh();
     }
 
+    private function allowedTargetsFrom(string $currentStatus): array
+    {
+        return match ($currentStatus) {
+            'confirmed' => ['canceled', 'completed', 'no_show'],
+            'no_show' => ['confirmed', 'canceled'],
+            default => [],
+        };
+    }
+
     private function hasBookingStarted(Booking $booking): bool
+    {
+        return $this->scheduledStartAt($booking)->lte(Carbon::now(TenantManager::timezone()));
+    }
+
+    private function hasBookingEnded(Booking $booking): bool
+    {
+        return $this->scheduledEndAt($booking)->lte(Carbon::now(TenantManager::timezone()));
+    }
+
+    private function scheduledStartAt(Booking $booking): Carbon
     {
         $timezone = TenantManager::timezone();
         $date = (string) $booking->date;
         $startTime = substr((string) $booking->start_time, 0, 5);
 
-        $scheduledAt = Carbon::createFromFormat('Y-m-d H:i', "{$date} {$startTime}", $timezone);
+        return Carbon::createFromFormat('Y-m-d H:i', "{$date} {$startTime}", $timezone);
+    }
 
-        return $scheduledAt->lte(Carbon::now($timezone));
+    private function scheduledEndAt(Booking $booking): Carbon
+    {
+        $timezone = TenantManager::timezone();
+        $date = (string) $booking->date;
+        $endTime = substr((string) $booking->end_time, 0, 5);
+
+        return Carbon::createFromFormat('Y-m-d H:i', "{$date} {$endTime}", $timezone);
     }
 }

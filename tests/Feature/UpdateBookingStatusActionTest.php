@@ -43,6 +43,15 @@ class UpdateBookingStatusActionTest extends TestCase
         $this->assertSame('no_show', $updated->status);
     }
 
+    public function test_it_allows_marking_a_booking_as_completed_after_end_time(): void
+    {
+        [, $booking] = $this->seedBooking('2026-03-10', '09:00');
+
+        $updated = app(UpdateBookingStatusAction::class)->run($booking, 'completed');
+
+        $this->assertSame('completed', $updated->status);
+    }
+
     public function test_it_rejects_transition_from_canceled_to_no_show(): void
     {
         [, $booking] = $this->seedBooking('2026-03-10', '09:00');
@@ -54,6 +63,17 @@ class UpdateBookingStatusActionTest extends TestCase
         $this->expectExceptionMessage('Une réservation annulée ne peut plus changer de statut.');
 
         $action->run($booking->refresh(), 'no_show');
+    }
+
+    public function test_it_allows_confirming_a_no_show_booking_again(): void
+    {
+        [, $booking] = $this->seedBooking('2026-03-10', '09:00');
+
+        $action = app(UpdateBookingStatusAction::class);
+        $booking = $action->run($booking, 'no_show');
+        $booking = $action->run($booking, 'confirmed');
+
+        $this->assertSame('confirmed', $booking->status);
     }
 
     private function seedBooking(string $date, string $startTime): array

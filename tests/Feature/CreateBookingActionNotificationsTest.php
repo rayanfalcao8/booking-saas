@@ -10,8 +10,12 @@ use App\Models\Staff;
 use App\Models\StaffSchedule;
 use App\Notifications\BusinessBookingCreated;
 use App\Notifications\CustomerBookingConfirmed;
+use Illuminate\Contracts\Notifications\Dispatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 class CreateBookingActionNotificationsTest extends TestCase
@@ -74,6 +78,39 @@ class CreateBookingActionNotificationsTest extends TestCase
 
         Notification::assertSentOnDemandTimes(BusinessBookingCreated::class, 1);
         Notification::assertSentOnDemandTimes(CustomerBookingConfirmed::class, 0);
+    }
+
+    public function test_it_does_not_fail_booking_creation_when_notification_delivery_throws(): void
+    {
+        Log::spy();
+
+        [, $service, $staff] = $this->seedBookingContext();
+
+        $dispatcher = Mockery::mock(Dispatcher::class);
+        $dispatcher->shouldReceive('sendNow')
+            ->twice()
+            ->andThrow(new RuntimeException('Mail transport unavailable.'));
+
+        $this->app->instance(Dispatcher::class, $dispatcher);
+
+        $booking = app(CreateBookingAction::class)->run([
+            'service_id' => $service->id,
+            'staff_id' => $staff->id,
+            'date' => '2026-03-10',
+            'start_time' => '09:00',
+            'customer_name' => 'Client One',
+            'customer_email' => 'client@example.com',
+            'customer_phone' => '555-0100',
+        ]);
+
+        $this->assertDatabaseHas('bookings', [
+            'id' => $booking->id,
+            'status' => 'confirmed',
+            'customer_email' => 'client@example.com',
+        ]);
+
+        Log::shouldHaveReceived('warning')
+            ->twice();
     }
 
     private function seedBookingContext(): array

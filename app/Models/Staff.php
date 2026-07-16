@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Core\Tenancy\Concerns\BelongsToBusiness;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Staff extends Model
 {
@@ -19,4 +21,19 @@ class Staff extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    public function business(): BelongsTo
+    {
+        return $this->belongsTo(Business::class);
+    }
+
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(StaffSchedule::class);
+    }
+
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
 }

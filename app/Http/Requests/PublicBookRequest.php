@@ -19,12 +19,20 @@ class PublicBookRequest extends FormRequest
             'service_id' => [
                 'required',
                 'integer',
-                Rule::exists('services', 'id')->where(fn ($query) => $query->where('business_id', TenantManager::id())),
+                Rule::exists('services', 'id')->where(
+                    fn ($query) => $query
+                        ->where('business_id', TenantManager::id())
+                        ->where('is_active', true)
+                ),
             ],
             'staff_id' => [
                 'required',
                 'integer',
-                Rule::exists('staff', 'id')->where(fn ($query) => $query->where('business_id', TenantManager::id())),
+                Rule::exists('staff', 'id')->where(
+                    fn ($query) => $query
+                        ->where('business_id', TenantManager::id())
+                        ->where('is_active', true)
+                ),
             ],
             'date' => ['required', 'date_format:Y-m-d'],
             'start_time' => ['required', 'date_format:H:i'],
@@ -39,10 +47,33 @@ class PublicBookRequest extends FormRequest
     {
         return [
             'service_id.required' => 'Le service est obligatoire.',
+            'service_id.exists' => 'Le service sélectionné est indisponible.',
             'staff_id.required' => 'Le prestataire est obligatoire.',
+            'staff_id.exists' => 'Le prestataire sélectionné est indisponible.',
             'date.required' => 'La date est obligatoire.',
+            'date.date_format' => 'Le format de la date est invalide.',
             'start_time.required' => 'Le créneau est obligatoire.',
+            'start_time.date_format' => 'Le format du créneau est invalide.',
             'customer_name.required' => 'Le nom client est obligatoire.',
+            'customer_name.max' => 'Le nom client est trop long.',
+            'customer_email.email' => 'Veuillez entrer un email valide.',
+            'customer_email.max' => 'L’email est trop long.',
+            'customer_phone.max' => 'Le numéro de téléphone est trop long.',
+            'notes.max' => 'Les notes sont trop longues.',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'service_id' => 'service',
+            'staff_id' => 'prestataire',
+            'date' => 'date',
+            'start_time' => 'créneau',
+            'customer_name' => 'nom',
+            'customer_email' => 'email',
+            'customer_phone' => 'téléphone',
+            'notes' => 'notes',
         ];
     }
 }

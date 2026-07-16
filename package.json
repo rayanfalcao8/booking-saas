@@ -2,8 +2,12 @@
     "$schema": "https://www.schemastore.org/package.json",
     "private": true,
     "type": "module",
+    "engines": {
+        "node": ">=20.19.0",
+        "npm": ">=10"
+    },
     "scripts": {
-        "build": "vite build",
+        "build": "rm -f public/hot && vite build",
         "dev": "vite"
     },
     "devDependencies": {

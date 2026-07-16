@@ -64,7 +64,10 @@ class PublicBookingPageTest extends TestCase
             ->assertSee('Alice')
             ->assertDontSee('Massage')
             ->assertDontSee('Bob')
-            ->assertSee('Agenda semaine')
-            ->assertSee('Par prestataire');
+            ->assertSee('Choisissez votre service')
+            ->assertSee('Choisissez une date')
+            ->assertSee('Choisissez un créneau')
+            ->assertSee('Vos informations')
+            ->assertSee('Confirmer la réservation');
     }
 }

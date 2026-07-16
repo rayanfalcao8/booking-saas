@@ -2,14 +2,14 @@
 
 namespace App\Filament\App\Resources;
 
-use App\Filament\App\Resources\BookingResource\Pages;
 use App\Domain\Booking\Actions\UpdateBookingStatusAction;
+use App\Filament\App\Resources\BookingResource\Pages;
 use App\Models\Booking;
 use App\Models\Service;
 use App\Models\Staff;
 use Filament\Forms;
-use Filament\Notifications\Notification;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -64,6 +64,7 @@ class BookingResource extends Resource
                     Forms\Components\TimePicker::make('end_time')
                         ->label('Heure de fin')
                         ->required()
+                        ->disabled()
                         ->seconds(false),
 
                     Forms\Components\Select::make('status')
@@ -73,6 +74,7 @@ class BookingResource extends Resource
                         ->options([
                             'confirmed' => 'Confirmé',
                             'canceled' => 'Annulé',
+                            'completed' => 'Terminé',
                             'no_show' => 'No-show',
                         ])
                         ->default('confirmed'),
@@ -144,59 +146,49 @@ class BookingResource extends Resource
                     ->colors([
                         'success' => 'confirmed',
                         'danger' => 'canceled',
+                        'gray' => 'completed',
                         'warning' => 'no_show',
                     ])
                     ->formatStateUsing(fn (string $state) => match ($state) {
                         'confirmed' => 'Confirmé',
                         'canceled' => 'Annulé',
+                        'completed' => 'Terminé',
                         'no_show' => 'No-show',
                         default => $state,
                     }),
             ])
             ->actions([
+                Tables\Actions\Action::make('mark_confirmed')
+                    ->label('Marquer confirmé')
+                    ->color('success')
+                    ->visible(fn (Booking $record) => $record->status === 'no_show')
+                    ->requiresConfirmation()
+                    ->action(fn (Booking $record): Notification => self::runStatusAction($record, 'confirmed', 'Réservation confirmée.')),
+
                 Tables\Actions\Action::make('mark_no_show')
                     ->label('Marquer no-show')
                     ->color('warning')
                     ->visible(fn (Booking $record) => $record->status === 'confirmed')
                     ->requiresConfirmation()
-                    ->action(function (Booking $record): void {
-                        try {
-                            app(UpdateBookingStatusAction::class)->run($record, 'no_show');
+                    ->action(fn (Booking $record): Notification => self::runStatusAction($record, 'no_show', 'Réservation marquée no-show.')),
 
-                            Notification::make()
-                                ->title('Réservation marquée no-show.')
-                                ->success()
-                                ->send();
-                        } catch (ValidationException $exception) {
-                            Notification::make()
-                                ->title(collect($exception->errors())->flatten()->first() ?? 'Transition impossible.')
-                                ->danger()
-                                ->send();
-                        }
-                    }),
+                Tables\Actions\Action::make('mark_completed')
+                    ->label('Marquer terminé')
+                    ->color('gray')
+                    ->visible(fn (Booking $record) => $record->status === 'confirmed')
+                    ->requiresConfirmation()
+                    ->action(fn (Booking $record): Notification => self::runStatusAction($record, 'completed', 'Réservation marquée comme terminée.')),
 
                 Tables\Actions\Action::make('cancel_booking')
                     ->label('Annuler')
                     ->color('danger')
                     ->visible(fn (Booking $record) => in_array($record->status, ['confirmed', 'no_show'], true))
                     ->requiresConfirmation()
-                    ->action(function (Booking $record): void {
-                        try {
-                            app(UpdateBookingStatusAction::class)->run($record, 'canceled');
+                    ->action(fn (Booking $record): Notification => self::runStatusAction($record, 'canceled', 'Réservation annulée.')),
 
-                            Notification::make()
-                                ->title('Réservation annulée.')
-                                ->success()
-                                ->send();
-                        } catch (ValidationException $exception) {
-                            Notification::make()
-                                ->title(collect($exception->errors())->flatten()->first() ?? 'Annulation impossible.')
-                                ->danger()
-                                ->send();
-                        }
-                    }),
-
-                Tables\Actions\EditAction::make()->label('Modifier'),
+                Tables\Actions\EditAction::make()
+                    ->label('Modifier')
+                    ->visible(fn (Booking $record) => $record->status === 'confirmed'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -212,5 +204,22 @@ class BookingResource extends Resource
             'create' => Pages\CreateBooking::route('/create'),
             'edit' => Pages\EditBooking::route('/{record}/edit'),
         ];
+    }
+
+    private static function runStatusAction(Booking $record, string $targetStatus, string $successTitle): Notification
+    {
+        try {
+            app(UpdateBookingStatusAction::class)->run($record, $targetStatus);
+
+            return Notification::make()
+                ->title($successTitle)
+                ->success()
+                ->send();
+        } catch (ValidationException $exception) {
+            return Notification::make()
+                ->title(collect($exception->errors())->flatten()->first() ?? 'Transition impossible.')
+                ->danger()
+                ->send();
+        }
     }
 }

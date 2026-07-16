@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Core\Tenancy\Concerns\BelongsToBusiness;
+use App\Core\Tenancy\TenantManager;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Validation\ValidationException;
 
 class Booking extends Model
 {
@@ -35,6 +37,12 @@ class Booking extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (Booking $booking): void {
+            $booking->guardBusinessIntegrity();
+        });
+    }
 
     public function isCancellationTokenValid(string $token): bool
     {
@@ -61,6 +69,41 @@ class Booking extends Model
 
     public function business(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Business::class);
+        return $this->belongsTo(Business::class);
+    }
+
+    private function guardBusinessIntegrity(): void
+    {
+        if (empty($this->business_id) && TenantManager::id()) {
+            $this->business_id = TenantManager::id();
+        }
+
+        $service = Service::withoutGlobalScopes()->find($this->service_id);
+
+        if (! $service) {
+            throw ValidationException::withMessages([
+                'service_id' => 'Le service sélectionné est introuvable.',
+            ]);
+        }
+
+        if ((int) $service->business_id !== (int) $this->business_id) {
+            throw ValidationException::withMessages([
+                'service_id' => 'Le service sélectionné est invalide pour ce business.',
+            ]);
+        }
+
+        $staff = Staff::withoutGlobalScopes()->find($this->staff_id);
+
+        if (! $staff) {
+            throw ValidationException::withMessages([
+                'staff_id' => 'Le prestataire sélectionné est introuvable.',
+            ]);
+        }
+
+        if ((int) $staff->business_id !== (int) $this->business_id) {
+            throw ValidationException::withMessages([
+                'staff_id' => 'Le prestataire sélectionné est invalide pour ce business.',
+            ]);
+        }
     }
 }

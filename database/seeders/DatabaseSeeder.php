@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -15,11 +14,16 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            ReservixDemoSeeder::class,
         ]);
+
+        if ($this->command) {
+            $this->command->info('Reservix demo data created.');
+            $this->command->line('Super admin: admin@reservix.test / password');
+            $this->command->line('- owners@maisonkinks.test / password');
+            $this->command->line('- owners@northsidefade.test / password');
+            $this->command->line('- owners@sparklemove.test / password');
+        }
     }
 }

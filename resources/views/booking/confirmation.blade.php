@@ -4,69 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Confirmation réservation</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f8fafc;
-            color: #0f172a;
-        }
-
-        .wrap {
-            max-width: 760px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-
-        .card {
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-        }
-
-        .row {
-            margin-bottom: 10px;
-        }
-
-        .label {
-            color: #64748b;
-            font-size: 13px;
-        }
-
-        .value {
-            font-weight: 600;
-        }
-
-        .btn {
-            margin-top: 18px;
-            display: inline-block;
-            padding: 10px 14px;
-            border-radius: 10px;
-            text-decoration: none;
-            background: #991b1b;
-            color: #fff;
-        }
-    </style>
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
+    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endif
 </head>
-<body>
-<div class="wrap">
-    <div class="card">
-        <h1>Réservation confirmée</h1>
-        <p>Merci {{ $booking->customer_name }}, votre rendez-vous est bien enregistré.</p>
+<body class="min-h-screen bg-stone-50 text-stone-950">
+<main class="mx-auto flex min-h-screen max-w-3xl items-center px-4 py-8 sm:px-6">
+    <section class="w-full rounded-[2rem] border border-stone-200 bg-white p-6 shadow-[0_20px_80px_rgba(28,25,23,0.08)] sm:p-8">
+        <div class="inline-flex rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-800">
+            Réservation confirmée
+        </div>
 
-        <div class="row"><div class="label">Business</div><div class="value">{{ $business->name }}</div></div>
-        <div class="row"><div class="label">Service</div><div class="value">{{ $booking->service?->name ?? '-' }}</div></div>
-        <div class="row"><div class="label">Prestataire</div><div class="value">{{ $booking->staff?->name ?? '-' }}</div></div>
-        <div class="row"><div class="label">Date</div><div class="value">{{ $booking->date }}</div></div>
-        <div class="row"><div class="label">Heure</div><div class="value">{{ $booking->start_time }} - {{ $booking->end_time }}</div></div>
-        <div class="row"><div class="label">Statut</div><div class="value">{{ $booking->status }}</div></div>
+        <h1 class="mt-4 text-3xl font-semibold tracking-tight">Merci {{ $booking->customer_name }}</h1>
+        <p class="mt-3 text-sm leading-6 text-stone-600 sm:text-base">
+            Votre rendez-vous est bien enregistré chez {{ $business->name }}. Vous pouvez conserver cette page pour retrouver vos informations.
+        </p>
+
+        <div class="mt-8 grid gap-4 rounded-3xl border border-stone-200 bg-stone-50 p-5 sm:grid-cols-2">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">Business</p>
+                <p class="mt-1 text-base font-medium text-stone-900">{{ $business->name }}</p>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">Service</p>
+                <p class="mt-1 text-base font-medium text-stone-900">{{ $booking->service?->name ?? '-' }}</p>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">Prestataire</p>
+                <p class="mt-1 text-base font-medium text-stone-900">{{ $booking->staff?->name ?? '-' }}</p>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">Date</p>
+                <p class="mt-1 text-base font-medium text-stone-900">{{ $booking->date }}</p>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">Heure</p>
+                <p class="mt-1 text-base font-medium text-stone-900">{{ $booking->start_time }} - {{ $booking->end_time }}</p>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">Statut</p>
+                <p class="mt-1 text-base font-medium text-stone-900">{{ $booking->status }}</p>
+            </div>
+        </div>
 
         @if($booking->status !== 'canceled')
-            <a class="btn" href="{{ $cancelUrl }}">Annuler cette réservation</a>
+            <a
+                class="mt-8 inline-flex items-center justify-center rounded-full bg-red-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-800"
+                href="{{ $cancelUrl }}"
+            >
+                Annuler cette réservation
+            </a>
         @endif
-    </div>
-</div>
+    </section>
+</main>
 </body>
 </html>

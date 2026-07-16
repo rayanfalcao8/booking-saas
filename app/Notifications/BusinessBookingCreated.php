@@ -34,13 +34,15 @@ class BusinessBookingCreated extends Notification implements ShouldQueue
             : (string) $this->booking->date;
 
         return (new MailMessage)
-            ->subject('Nouveau booking confirme')
-            ->line('Un nouveau booking a ete cree.')
-            ->line('Client: '.$this->booking->customer_name)
-            ->line('Service: '.($this->booking->service?->name ?? '-'))
-            ->line('Employe: '.($this->booking->staff?->name ?? '-'))
-            ->line('Date: '.$bookingDate)
-            ->line('Heure: '.$this->booking->start_time.' - '.$this->booking->end_time);
+            ->mailer('failover')
+            ->subject('Nouvelle réservation confirmée')
+            ->markdown('mail.bookings.business-created', [
+                'booking' => $this->booking,
+                'bookingDate' => $bookingDate,
+                'serviceName' => $this->booking->service?->name ?? '-',
+                'staffName' => $this->booking->staff?->name ?? '-',
+                'businessName' => $this->booking->business?->name ?? config('app.name'),
+            ]);
     }
 
     /**
