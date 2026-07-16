@@ -105,6 +105,7 @@ class UpdateBookingStatusActionTest extends TestCase
             'slug' => 'status-studio',
             'timezone' => 'America/Montreal',
             'email' => 'status@example.com',
+            'booking_max_advance_days' => 3650,
         ]);
 
         TenantManager::set($business);

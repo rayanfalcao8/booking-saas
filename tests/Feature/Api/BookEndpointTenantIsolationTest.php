@@ -70,7 +70,7 @@ class BookEndpointTenantIsolationTest extends TestCase
         [$business, $service, $staff] = $this->seedBusinessWithCatalog('studio-four', 'service-four@example.com');
 
         $dispatcher = Mockery::mock(Dispatcher::class);
-        $dispatcher->shouldReceive('sendNow')
+        $dispatcher->shouldReceive('send')
             ->twice()
             ->andThrow(new RuntimeException('Mail transport unavailable.'));
 
