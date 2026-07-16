@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Core\Tenancy\Middleware\InitializeTenant;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -17,7 +18,6 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use App\Core\Tenancy\Middleware\InitializeTenant;
 
 class AppPanelProvider extends PanelProvider
 {
@@ -29,6 +29,7 @@ class AppPanelProvider extends PanelProvider
             ->path('app')
             ->login()
             ->authGuard('web')
+            ->brandName('Reservix')
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -40,7 +41,6 @@ class AppPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/App/Widgets'), for: 'App\\Filament\\App\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,

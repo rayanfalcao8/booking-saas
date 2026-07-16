@@ -2,18 +2,23 @@
 
 namespace Tests\Feature;
 
-// use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
-    /**
-     * A basic test example.
-     */
-    public function test_the_application_returns_a_successful_response(): void
+    public function test_the_landing_page_presents_reservix(): void
     {
         $response = $this->get('/');
 
-        $response->assertStatus(200);
+        $response
+            ->assertOk()
+            ->assertSee('Reservix')
+            ->assertSee("Vos rendez-vous n'ont plus besoin de vos messages.")
+            ->assertSee('Le service')
+            ->assertSee('Les avantages')
+            ->assertSee('Sécurité')
+            ->assertSee('FAQ')
+            ->assertSee('/app/login', escape: false)
+            ->assertDontSee('Laravel has an incredibly rich ecosystem');
     }
 }
