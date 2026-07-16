@@ -13,7 +13,17 @@ class CustomerBookingConfirmed extends Notification implements ShouldQueue
 {
     use Queueable;
 
+    public int $tries = 3;
+
     public function __construct(public Booking $booking) {}
+
+    /**
+     * @return array<int, int>
+     */
+    public function backoff(): array
+    {
+        return [60, 300];
+    }
 
     /**
      * Get the notification's delivery channels.
@@ -78,7 +88,6 @@ class CustomerBookingConfirmed extends Notification implements ShouldQueue
         ]);
 
         return (new MailMessage)
-            ->mailer('failover')
             ->subject('Confirmation de votre réservation')
             ->markdown('mail.bookings.customer-confirmed', [
                 'booking' => $this->booking,
