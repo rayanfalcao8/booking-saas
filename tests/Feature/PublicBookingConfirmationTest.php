@@ -10,6 +10,7 @@ use App\Models\Service;
 use App\Models\Staff;
 use App\Models\StaffSchedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class PublicBookingConfirmationTest extends TestCase
@@ -45,7 +46,7 @@ class PublicBookingConfirmationTest extends TestCase
         [$business, $booking] = $this->seedBooking();
 
         $booking->forceFill([
-            'cancellation_expires_at' => now()->subMinute(),
+            'cancellation_expires_at' => Carbon::create(2026, 2, 28, 12, 0, 0, 'America/Montreal'),
         ])->save();
 
         $response = $this->get(route('public.booking.confirmation', [
@@ -72,6 +73,8 @@ class PublicBookingConfirmationTest extends TestCase
 
     private function seedBooking(): array
     {
+        Notification::fake();
+
         $business = Business::query()->create([
             'name' => 'Confirm Studio',
             'slug' => 'confirm-studio',

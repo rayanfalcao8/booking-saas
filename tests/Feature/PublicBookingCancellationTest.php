@@ -10,6 +10,7 @@ use App\Models\Staff;
 use App\Models\StaffSchedule;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class PublicBookingCancellationTest extends TestCase
@@ -109,7 +110,7 @@ class PublicBookingCancellationTest extends TestCase
         [$business, $booking] = $this->seedBooking();
 
         $booking->forceFill([
-            'cancellation_expires_at' => now()->subMinute(),
+            'cancellation_expires_at' => Carbon::create(2026, 2, 28, 12, 0, 0, 'America/Montreal'),
         ])->save();
 
         $response = $this->postJson("/api/b/{$business->slug}/book/{$booking->id}/cancel", [
@@ -136,6 +137,8 @@ class PublicBookingCancellationTest extends TestCase
 
     private function seedBooking(): array
     {
+        Notification::fake();
+
         $business = Business::query()->create([
             'name' => 'Cancel Studio',
             'slug' => 'cancel-studio',
