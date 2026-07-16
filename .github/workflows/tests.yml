@@ -30,8 +30,14 @@ jobs:
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: Check PHP formatting
+        run: vendor/bin/pint --test
+
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Audit production frontend dependencies
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Build frontend
         run: npm run build
