@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use Carbon\Carbon;
 use App\Core\Tenancy\TenantManager;
 use App\Domain\Booking\Actions\CreateBookingAction;
 use App\Models\Business;
 use App\Models\Service;
 use App\Models\Staff;
 use App\Models\StaffSchedule;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -23,7 +23,7 @@ class PublicBookingCancellationTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_it_cancels_booking_from_public_cancel_link(): void
+    public function test_it_only_displays_confirmation_from_public_cancel_link(): void
     {
         [$business, $booking] = $this->seedBooking();
 
@@ -33,7 +33,28 @@ class PublicBookingCancellationTest extends TestCase
             'token' => $booking->cancellation_token,
         ]));
 
-        $response->assertOk()->assertSee('Annulation confirmée');
+        $response
+            ->assertOk()
+            ->assertSee('Annuler cette réservation ?')
+            ->assertSee('Confirmer l’annulation');
+
+        $this->assertDatabaseHas('bookings', [
+            'id' => $booking->id,
+            'status' => 'confirmed',
+        ]);
+    }
+
+    public function test_it_cancels_booking_after_explicit_confirmation(): void
+    {
+        [$business, $booking] = $this->seedBooking();
+
+        $response = $this->post(route('public.booking.cancel.perform', [
+            'business' => $business->slug,
+            'booking' => $booking->id,
+            'token' => $booking->cancellation_token,
+        ]));
+
+        $response->assertOk()->assertSee('Votre réservation est annulée');
 
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,
@@ -51,7 +72,7 @@ class PublicBookingCancellationTest extends TestCase
             'token' => 'invalid-token',
         ]));
 
-        $response->assertOk()->assertSee('Erreur d’annulation');
+        $response->assertOk()->assertSee('Impossible d’annuler');
 
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,

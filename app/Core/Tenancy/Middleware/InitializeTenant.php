@@ -11,21 +11,28 @@ class InitializeTenant
 {
     public function handle(Request $request, Closure $next)
     {
-        $business = $request->route('business');
+        TenantManager::forget();
 
-        if ($business instanceof Business) {
-            TenantManager::set($business);
-            return $next($request);
-        }
+        try {
+            $business = $request->route('business');
 
-        $user = $request->user();
-        if ($user && $user->business_id) {
-            $tenant = Business::query()->find($user->business_id);
-            if ($tenant) {
-                TenantManager::set($tenant);
+            if ($business instanceof Business) {
+                TenantManager::set($business);
+            } else {
+                $user = $request->user();
+
+                if ($user && $user->business_id) {
+                    $tenant = Business::query()->find($user->business_id);
+
+                    if ($tenant) {
+                        TenantManager::set($tenant);
+                    }
+                }
             }
-        }
 
-        return $next($request);
+            return $next($request);
+        } finally {
+            TenantManager::forget();
+        }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Domain\Booking\Actions;
 
 use App\Domain\Booking\Services\BookingValidationService;
 use App\Models\Booking;
+use App\Models\Staff;
 use App\Notifications\BusinessBookingCreated;
 use App\Notifications\CustomerBookingConfirmed;
 use Illuminate\Notifications\Notification as NotificationMessage;
@@ -19,7 +20,8 @@ class CreateBookingAction
 
     public function run(array $data): Booking
     {
-        $booking = DB::transaction(function () use ($data) {
+        $booking = DB::transaction(function () use ($data): Booking {
+            $this->lockStaff((int) ($data['staff_id'] ?? 0));
             $validated = $this->bookingValidationService->validate($data);
 
             return Booking::query()->create([
@@ -36,12 +38,20 @@ class CreateBookingAction
                 'cancellation_token' => Str::random(48),
                 'cancellation_expires_at' => $validated['cancellation_expires_at'],
             ]);
-        });
+        }, 3);
 
         $booking->loadMissing(['service', 'staff', 'business']);
         $this->sendCreatedNotifications($booking);
 
         return $booking;
+    }
+
+    private function lockStaff(int $staffId): void
+    {
+        Staff::withoutGlobalScopes()
+            ->whereKey($staffId)
+            ->lockForUpdate()
+            ->first();
     }
 
     private function sendCreatedNotifications(Booking $booking): void

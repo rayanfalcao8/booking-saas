@@ -53,7 +53,9 @@ class BookingValidationService
         $date = (string) $data['date'];
         $start = $this->parseStartTime($data['start_time'] ?? null, $timezone);
         $end = $start->copy()->addMinutes((int) $service->duration_min + (int) $service->buffer_min);
-        $cancellationExpiresAt = $this->combineDateAndTime($date, $start, $timezone);
+        $startsAt = $this->combineDateAndTime($date, $start, $timezone);
+
+        $this->assertFutureSlot($startsAt);
 
         $this->assertWithinStaffSchedule(
             businessId: $businessId,
@@ -80,13 +82,14 @@ class BookingValidationService
             'date' => $date,
             'start_time' => $start->format('H:i:s'),
             'end_time' => $end->format('H:i:s'),
-            'cancellation_expires_at' => $cancellationExpiresAt,
+            'cancellation_expires_at' => $startsAt,
         ];
     }
 
     private function resolveBusinessId(?Booking $ignoreBooking): int
     {
-        $businessId = $ignoreBooking?->business_id ?? TenantManager::id();
+        $tenantBusinessId = TenantManager::id();
+        $businessId = $ignoreBooking?->business_id ?? $tenantBusinessId;
 
         if (! $businessId) {
             throw ValidationException::withMessages([
@@ -94,7 +97,22 @@ class BookingValidationService
             ]);
         }
 
+        if ($ignoreBooking && $tenantBusinessId && (int) $ignoreBooking->business_id !== (int) $tenantBusinessId) {
+            throw ValidationException::withMessages([
+                'business' => 'La réservation sélectionnée est invalide pour ce business.',
+            ]);
+        }
+
         return (int) $businessId;
+    }
+
+    private function assertFutureSlot(Carbon $startsAt): void
+    {
+        if ($startsAt->lte(Carbon::now($startsAt->getTimezone()))) {
+            throw ValidationException::withMessages([
+                'start_time' => 'Le créneau doit être dans le futur.',
+            ]);
+        }
     }
 
     private function assertTenantIntegrity(Service $service, Staff $staff, int $businessId): void

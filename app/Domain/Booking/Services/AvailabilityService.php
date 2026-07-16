@@ -5,6 +5,7 @@ namespace App\Domain\Booking\Services;
 use App\Domain\Booking\DTO\AvailabilityQuery;
 use App\Models\Booking;
 use App\Models\Service;
+use App\Models\Staff;
 use App\Models\StaffSchedule;
 use Carbon\Carbon;
 
@@ -18,10 +19,21 @@ class AvailabilityService
             return [];
         }
 
+        $staff = Staff::query()->findOrFail($q->staffId);
+
+        if (! $staff->is_active) {
+            return [];
+        }
+
         $duration = (int) $service->duration_min + (int) $service->buffer_min;
 
         $tz = \App\Core\Tenancy\TenantManager::timezone();
         $date = Carbon::createFromFormat('Y-m-d', $q->date, $tz);
+        $now = Carbon::now($tz);
+
+        if ($date->copy()->startOfDay()->lt($now->copy()->startOfDay())) {
+            return [];
+        }
 
         $dow = (int) $date->dayOfWeek;
         $schedules = StaffSchedule::query()
@@ -55,8 +67,13 @@ class AvailabilityService
             while ($cursor->copy()->addMinutes($duration)->lte($end)) {
                 $slotStart = $cursor->copy();
                 $slotEnd = $cursor->copy()->addMinutes($duration);
+                $slotStartsAt = Carbon::createFromFormat(
+                    'Y-m-d H:i:s',
+                    sprintf('%s %s', $q->date, $slotStart->format('H:i:s')),
+                    $tz,
+                );
 
-                if (! $this->overlapsBusy($slotStart, $slotEnd, $busy)) {
+                if ($slotStartsAt->gt($now) && ! $this->overlapsBusy($slotStart, $slotEnd, $busy)) {
                     $slots[] = $slotStart->format('H:i');
                 }
 

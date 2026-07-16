@@ -4,6 +4,7 @@ namespace App\Domain\Booking\Actions;
 
 use App\Domain\Booking\Services\BookingValidationService;
 use App\Models\Booking;
+use App\Models\Staff;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -13,16 +14,23 @@ class UpdateBookingDetailsAction
 
     public function run(Booking $booking, array $data): Booking
     {
-        if ((string) $booking->status !== 'confirmed') {
-            throw ValidationException::withMessages([
-                'status' => 'Seules les réservations confirmées peuvent être modifiées.',
-            ]);
-        }
+        return DB::transaction(function () use ($booking, $data): Booking {
+            $lockedBooking = Booking::withoutGlobalScopes()
+                ->whereKey($booking->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $validated = $this->bookingValidationService->validate($data, $booking);
+            $this->lockStaff((int) ($data['staff_id'] ?? 0));
 
-        return DB::transaction(function () use ($booking, $data, $validated): Booking {
-            $booking->forceFill([
+            if ((string) $lockedBooking->status !== 'confirmed') {
+                throw ValidationException::withMessages([
+                    'status' => 'Seules les réservations confirmées peuvent être modifiées.',
+                ]);
+            }
+
+            $validated = $this->bookingValidationService->validate($data, $lockedBooking);
+
+            $lockedBooking->forceFill([
                 'service_id' => $validated['service']->id,
                 'staff_id' => $validated['staff']->id,
                 'date' => $validated['date'],
@@ -35,7 +43,15 @@ class UpdateBookingDetailsAction
                 'cancellation_expires_at' => $validated['cancellation_expires_at'],
             ])->save();
 
-            return $booking->refresh()->loadMissing(['service', 'staff', 'business']);
-        });
+            return $lockedBooking->refresh()->loadMissing(['service', 'staff', 'business']);
+        }, 3);
+    }
+
+    private function lockStaff(int $staffId): void
+    {
+        Staff::withoutGlobalScopes()
+            ->whereKey($staffId)
+            ->lockForUpdate()
+            ->first();
     }
 }

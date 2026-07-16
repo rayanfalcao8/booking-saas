@@ -5,57 +5,73 @@ namespace App\Domain\Booking\Actions;
 use App\Core\Tenancy\TenantManager;
 use App\Models\Booking;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class UpdateBookingStatusAction
 {
     public function run(Booking $booking, string $targetStatus): Booking
     {
-        $currentStatus = (string) $booking->status;
+        return DB::transaction(function () use ($booking, $targetStatus): Booking {
+            $lockedBooking = Booking::withoutGlobalScopes()
+                ->whereKey($booking->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if ($currentStatus === $targetStatus) {
-            return $booking;
-        }
+            $tenantId = TenantManager::id();
 
-        if ($currentStatus === 'canceled') {
-            throw ValidationException::withMessages([
-                'status' => 'Une réservation annulée ne peut plus changer de statut.',
-            ]);
-        }
+            if ($tenantId && (int) $lockedBooking->business_id !== $tenantId) {
+                throw ValidationException::withMessages([
+                    'business' => 'La réservation sélectionnée est invalide pour ce business.',
+                ]);
+            }
 
-        if ($currentStatus === 'completed') {
-            throw ValidationException::withMessages([
-                'status' => 'Une réservation terminée ne peut plus changer de statut.',
-            ]);
-        }
+            $currentStatus = (string) $lockedBooking->status;
 
-        if (! in_array($targetStatus, $this->allowedTargetsFrom($currentStatus), true)) {
-            throw ValidationException::withMessages([
-                'status' => 'Transition de statut non autorisée.',
-            ]);
-        }
+            if ($currentStatus === $targetStatus) {
+                return $lockedBooking;
+            }
 
-        if ($targetStatus === 'no_show' && ! $this->hasBookingStarted($booking)) {
-            throw ValidationException::withMessages([
-                'status' => 'Le statut no-show est autorisé uniquement après l’heure prévue.',
-            ]);
-        }
+            if ($currentStatus === 'canceled') {
+                throw ValidationException::withMessages([
+                    'status' => 'Une réservation annulée ne peut plus changer de statut.',
+                ]);
+            }
 
-        if ($targetStatus === 'completed' && ! $this->hasBookingEnded($booking)) {
-            throw ValidationException::withMessages([
-                'status' => 'Le statut terminé est autorisé uniquement après la fin prévue.',
-            ]);
-        }
+            if ($currentStatus === 'completed') {
+                throw ValidationException::withMessages([
+                    'status' => 'Une réservation terminée ne peut plus changer de statut.',
+                ]);
+            }
 
-        $payload = ['status' => $targetStatus];
+            if (! in_array($targetStatus, $this->allowedTargetsFrom($currentStatus), true)) {
+                throw ValidationException::withMessages([
+                    'status' => 'Transition de statut non autorisée.',
+                ]);
+            }
 
-        if ($targetStatus === 'canceled') {
-            $payload['canceled_at'] = now();
-        }
+            if ($targetStatus === 'no_show' && ! $this->hasBookingStarted($lockedBooking)) {
+                throw ValidationException::withMessages([
+                    'status' => 'Le statut no-show est autorisé uniquement après l’heure prévue.',
+                ]);
+            }
 
-        $booking->forceFill($payload)->save();
+            if ($targetStatus === 'completed' && ! $this->hasBookingEnded($lockedBooking)) {
+                throw ValidationException::withMessages([
+                    'status' => 'Le statut terminé est autorisé uniquement après la fin prévue.',
+                ]);
+            }
 
-        return $booking->refresh();
+            $payload = ['status' => $targetStatus];
+
+            if ($targetStatus === 'canceled') {
+                $payload['canceled_at'] = now();
+            }
+
+            $lockedBooking->forceFill($payload)->save();
+
+            return $lockedBooking->refresh();
+        }, 3);
     }
 
     private function allowedTargetsFrom(string $currentStatus): array

@@ -15,6 +15,15 @@ class User extends Authenticatable implements FilamentUser
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
+    protected static function booted(): void
+    {
+        static::saving(function (User $user): void {
+            if ($user->is_super_admin) {
+                $user->business_id = null;
+            }
+        });
+    }
+
     /**
      * The attributes that are mass assignable.
      *

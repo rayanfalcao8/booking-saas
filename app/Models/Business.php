@@ -34,4 +34,9 @@ class Business extends Model
     {
         return $this->hasMany(Booking::class);
     }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
 }
