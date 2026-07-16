@@ -13,7 +13,7 @@ class ExampleTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Reservix')
-            ->assertSeeText("Vos rendez-vous n'ont plus besoin de vos messages.")
+            ->assertSee("Vos rendez-vous n'ont plus besoin de vos messages.", escape: false)
             ->assertSee('Le service')
             ->assertSee('Les avantages')
             ->assertSee('Sécurité')
