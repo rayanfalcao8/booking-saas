@@ -81,7 +81,6 @@ class PublicBookingCancellationTest extends TestCase
         ]);
     }
 
-
     public function test_it_prevents_canceling_booking_from_another_tenant_slug(): void
     {
         [$business, $booking] = $this->seedBooking();
@@ -103,7 +102,6 @@ class PublicBookingCancellationTest extends TestCase
             'status' => 'confirmed',
         ]);
     }
-
 
     public function test_it_rejects_expired_cancellation_token(): void
     {

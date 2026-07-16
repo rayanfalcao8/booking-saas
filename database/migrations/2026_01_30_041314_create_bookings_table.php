@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('bookings', function (\Illuminate\Database\Schema\Blueprint $table) {
+        Schema::create('bookings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('business_id')->constrained()->cascadeOnDelete();
 
@@ -20,7 +20,7 @@ return new class extends Migration
 
             $table->date('date'); // 2026-02-01
             $table->time('start_time'); // 09:00
-            $table->time('end_time');   // 09:30
+            $table->time('end_time'); // 09:30
 
             $table->string('customer_name');
             $table->string('customer_email')->nullable();
@@ -33,7 +33,6 @@ return new class extends Migration
 
             $table->index(['business_id', 'date', 'staff_id']);
         });
-
     }
 
     /**

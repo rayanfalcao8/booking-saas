@@ -13,11 +13,10 @@ class BusinessScope implements Scope
     {
         $tenantId = TenantManager::id();
 
-        if (!$tenantId) {
+        if (! $tenantId) {
             return;
         }
 
-        $builder->where($model->getTable() . '.business_id', $tenantId);
+        $builder->where($model->getTable().'.business_id', $tenantId);
     }
 }
-

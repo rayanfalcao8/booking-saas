@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use Carbon\Carbon;
 use App\Core\Tenancy\TenantManager;
 use App\Domain\Booking\Actions\CreateBookingAction;
 use App\Models\Business;
 use App\Models\Service;
 use App\Models\Staff;
 use App\Models\StaffSchedule;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -39,7 +39,6 @@ class PublicBookingConfirmationTest extends TestCase
             ->assertSee('Réservation confirmée')
             ->assertSee('Annuler cette réservation');
     }
-
 
     public function test_it_returns_not_found_for_expired_confirmation_token(): void
     {
