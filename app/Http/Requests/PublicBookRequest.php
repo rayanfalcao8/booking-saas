@@ -37,8 +37,8 @@ class PublicBookRequest extends FormRequest
             'date' => ['required', 'date_format:Y-m-d'],
             'start_time' => ['required', 'date_format:H:i'],
             'customer_name' => ['required', 'string', 'max:255'],
-            'customer_email' => ['nullable', 'email', 'max:255'],
-            'customer_phone' => ['nullable', 'string', 'max:50'],
+            'customer_email' => ['required', 'email', 'max:255'],
+            'customer_phone' => ['nullable', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', 'max:16'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
     }
@@ -56,9 +56,11 @@ class PublicBookRequest extends FormRequest
             'start_time.date_format' => 'Le format du créneau est invalide.',
             'customer_name.required' => 'Le nom client est obligatoire.',
             'customer_name.max' => 'Le nom client est trop long.',
+            'customer_email.required' => 'L’email client est obligatoire.',
             'customer_email.email' => 'Veuillez entrer un email valide.',
             'customer_email.max' => 'L’email est trop long.',
             'customer_phone.max' => 'Le numéro de téléphone est trop long.',
+            'customer_phone.regex' => 'Utilisez le format international, par exemple +14185550123.',
             'notes.max' => 'Les notes sont trop longues.',
         ];
     }

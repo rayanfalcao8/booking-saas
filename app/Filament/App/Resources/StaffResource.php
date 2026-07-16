@@ -31,6 +31,13 @@ class StaffResource extends Resource
                 ->email()
                 ->maxLength(255),
 
+            Forms\Components\CheckboxList::make('services')
+                ->label('Services proposés')
+                ->relationship('services', 'name')
+                ->helperText('Seuls ces services seront proposés avec ce collaborateur sur la page publique.')
+                ->columns(2)
+                ->columnSpanFull(),
+
             Forms\Components\Toggle::make('is_active')
                 ->label('Actif')
                 ->default(true),
@@ -42,6 +49,10 @@ class StaffResource extends Resource
         return $table->columns([
             Tables\Columns\TextColumn::make('name')->label('Nom')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('email')->label('Email')->searchable(),
+            Tables\Columns\TextColumn::make('services.name')
+                ->label('Services')
+                ->badge()
+                ->limitList(3),
             Tables\Columns\IconColumn::make('is_active')->label('Actif')->boolean(),
         ])->actions([
             Tables\Actions\EditAction::make()->label('Modifier'),

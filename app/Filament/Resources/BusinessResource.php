@@ -63,6 +63,64 @@ class BusinessResource extends Resource
                     ->label('Téléphone')
                     ->tel()
                     ->maxLength(255),
+
+                Forms\Components\Toggle::make('is_booking_enabled')
+                    ->label('Réservation publique active')
+                    ->default(true),
+
+                Forms\Components\Select::make('booking_min_notice_minutes')
+                    ->label('Préavis minimal')
+                    ->options([
+                        0 => 'Aucun',
+                        30 => '30 minutes',
+                        60 => '1 heure',
+                        120 => '2 heures',
+                        240 => '4 heures',
+                        1440 => '24 heures',
+                    ])
+                    ->default(60)
+                    ->required(),
+
+                Forms\Components\Select::make('booking_max_advance_days')
+                    ->label('Horizon de réservation')
+                    ->options([
+                        7 => '7 jours',
+                        14 => '14 jours',
+                        30 => '30 jours',
+                        60 => '60 jours',
+                        90 => '90 jours',
+                        180 => '180 jours',
+                        365 => '1 an',
+                    ])
+                    ->default(90)
+                    ->required(),
+
+                Forms\Components\Select::make('slot_interval_minutes')
+                    ->label('Intervalle entre les créneaux')
+                    ->options([
+                        5 => '5 minutes',
+                        10 => '10 minutes',
+                        15 => '15 minutes',
+                        20 => '20 minutes',
+                        30 => '30 minutes',
+                        60 => '60 minutes',
+                    ])
+                    ->default(15)
+                    ->required(),
+
+                Forms\Components\Select::make('cancellation_notice_hours')
+                    ->label('Délai limite d’annulation')
+                    ->options([
+                        0 => 'Jusqu’au rendez-vous',
+                        1 => '1 heure avant',
+                        2 => '2 heures avant',
+                        4 => '4 heures avant',
+                        12 => '12 heures avant',
+                        24 => '24 heures avant',
+                        48 => '48 heures avant',
+                    ])
+                    ->default(0)
+                    ->required(),
             ])
             ->columns(2);
     }

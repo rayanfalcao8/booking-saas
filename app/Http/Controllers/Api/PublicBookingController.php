@@ -18,13 +18,14 @@ class PublicBookingController extends Controller
 {
     public function availability(Business $business, PublicAvailabilityRequest $request, AvailabilityService $availabilityService): JsonResponse
     {
+        abort_unless($business->is_booking_enabled, 404);
+
         $data = $request->validated();
 
         $query = new AvailabilityQuery(
             serviceId: (int) $data['service_id'],
             staffId: (int) $data['staff_id'],
             date: $data['date'],
-            stepMin: (int) ($data['step_min'] ?? 15),
         );
 
         return response()->json([
@@ -34,6 +35,8 @@ class PublicBookingController extends Controller
 
     public function book(Business $business, PublicBookRequest $request, CreateBookingAction $createBookingAction): JsonResponse
     {
+        abort_unless($business->is_booking_enabled, 404);
+
         $booking = $createBookingAction->run($request->validated());
 
         return response()->json([

@@ -28,6 +28,8 @@ class AppPanelProvider extends PanelProvider
             ->id('app')
             ->path('app')
             ->login()
+            ->passwordReset()
+            ->profile()
             ->authGuard('web')
             ->brandName('Reservix')
             ->colors([
@@ -53,7 +55,7 @@ class AppPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
                 InitializeTenant::class,
-            ])
+            ], isPersistent: true)
             ->authMiddleware([
                 Authenticate::class,
             ], isPersistent: true);

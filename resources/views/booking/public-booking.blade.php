@@ -129,7 +129,7 @@
                                 <p class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">Étape 4</p>
                                 <h2 class="mt-1 text-lg font-semibold text-stone-900">Vos informations</h2>
                             </div>
-                            <span class="rounded-full bg-stone-200 px-3 py-1 text-xs font-semibold text-stone-700">Nom requis</span>
+                            <span class="rounded-full bg-stone-200 px-3 py-1 text-xs font-semibold text-stone-700">Nom et email requis</span>
                         </div>
 
                         <div class="grid gap-4 sm:grid-cols-2">
@@ -147,18 +147,20 @@
                                 <label class="mb-2 block text-sm font-medium text-stone-700" for="customer_phone">Téléphone</label>
                                 <input
                                     id="customer_phone"
-                                    type="text"
-                                    placeholder="06 00 00 00 00"
+                                    type="tel"
+                                    inputmode="tel"
+                                    placeholder="+1 418 555 0123"
                                     class="w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-base text-stone-900 outline-none ring-0 transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
                                 >
                             </div>
                         </div>
 
                         <div>
-                            <label class="mb-2 block text-sm font-medium text-stone-700" for="customer_email">Email</label>
+                            <label class="mb-2 block text-sm font-medium text-stone-700" for="customer_email">Email <span class="text-red-600">*</span></label>
                             <input
                                 id="customer_email"
                                 type="email"
+                                required
                                 placeholder="vous@exemple.com"
                                 class="w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-base text-stone-900 outline-none ring-0 transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
                             >
@@ -216,7 +218,7 @@
                         </button>
 
                         <p class="mt-3 text-xs leading-5 text-stone-400">
-                            En confirmant, vous recevrez les détails du rendez-vous et un lien d’annulation si disponible.
+                            Une confirmation sera envoyée par email et, si vous renseignez votre téléphone, par SMS.
                         </p>
                     </section>
                 </aside>
@@ -228,6 +230,8 @@
 <script>
     const availabilityUrl = @json($availabilityUrlTemplate);
     const bookingUrl = @json($bookingUrlTemplate);
+    const bookingMinDate = @json($bookingMinDate);
+    const bookingMaxDate = @json($bookingMaxDate);
     const services = @json($servicePayload);
     const staffMembers = @json($staffPayload);
 
@@ -260,7 +264,8 @@
         year: 'numeric',
     });
 
-    dateInput.min = new Date().toISOString().split('T')[0];
+    dateInput.min = bookingMinDate;
+    dateInput.max = bookingMaxDate;
 
     function setMessage(type, content) {
         const baseClass = 'rounded-2xl border px-4 py-3 text-sm font-medium';
@@ -305,7 +310,9 @@
         const hasRequiredValues = serviceSelect.value !== ''
             && dateInput.value !== ''
             && state.selectedSlot !== null
-            && customerNameInput.value.trim() !== '';
+            && customerNameInput.value.trim() !== ''
+            && customerEmailInput.validity.valid
+            && customerEmailInput.value.trim() !== '';
 
         confirmBookingButton.disabled = state.isSubmitting || state.isLoadingSlots || !hasRequiredValues;
         confirmBookingButton.textContent = state.isSubmitting
@@ -470,7 +477,7 @@
                     start_time: state.selectedSlot.time,
                     customer_name: customerNameInput.value.trim(),
                     customer_email: customerEmailInput.value.trim() || null,
-                    customer_phone: customerPhoneInput.value.trim() || null,
+                    customer_phone: customerPhoneInput.value.replace(/[^+\d]/g, '') || null,
                     notes: notesInput.value.trim() || null,
                 }),
             });
@@ -507,6 +514,7 @@
     });
 
     customerNameInput.addEventListener('input', updateSubmitState);
+    customerEmailInput.addEventListener('input', updateSubmitState);
     refreshSlotsButton.addEventListener('click', loadSlots);
     confirmBookingButton.addEventListener('click', confirmBooking);
 

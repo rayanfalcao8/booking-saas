@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Booking;
+use App\Notifications\Channels\SmsChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -21,7 +22,34 @@ class CustomerBookingConfirmed extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        $channels = ['mail'];
+
+        if ($notifiable->routeNotificationFor('sms', $this) && config('services.sms.driver', 'off') !== 'off') {
+            $channels[] = SmsChannel::class;
+        }
+
+        return $channels;
+    }
+
+    public function toSms(object $notifiable): string
+    {
+        $bookingDate = $this->booking->date instanceof \DateTimeInterface
+            ? $this->booking->date->format('Y-m-d')
+            : (string) $this->booking->date;
+
+        $confirmationUrl = route('public.booking.confirmation', [
+            'business' => $this->booking->business?->slug,
+            'booking' => $this->booking->id,
+            'token' => $this->booking->cancellation_token,
+        ]);
+
+        return sprintf(
+            'Reservix: rendez-vous confirmé chez %s le %s à %s. Détails: %s',
+            $this->booking->business?->name ?? config('app.name'),
+            $bookingDate,
+            substr((string) $this->booking->start_time, 0, 5),
+            $confirmationUrl,
+        );
     }
 
     /**

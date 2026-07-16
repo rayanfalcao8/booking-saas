@@ -4,15 +4,23 @@ namespace App\Domain\Booking\Services;
 
 use App\Domain\Booking\DTO\AvailabilityQuery;
 use App\Models\Booking;
+use App\Models\Business;
 use App\Models\Service;
 use App\Models\Staff;
 use App\Models\StaffSchedule;
+use App\Models\StaffTimeOff;
 use Carbon\Carbon;
 
 class AvailabilityService
 {
     public function slots(AvailabilityQuery $q): array
     {
+        $business = Business::query()->findOrFail(\App\Core\Tenancy\TenantManager::id());
+
+        if (! $business->is_booking_enabled) {
+            return [];
+        }
+
         $service = Service::query()->findOrFail($q->serviceId);
 
         if (! $service->is_active) {
@@ -25,6 +33,10 @@ class AvailabilityService
             return [];
         }
 
+        if (! $staff->services()->whereKey($service->id)->exists()) {
+            return [];
+        }
+
         $duration = (int) $service->duration_min + (int) $service->buffer_min;
 
         $tz = \App\Core\Tenancy\TenantManager::timezone();
@@ -32,6 +44,10 @@ class AvailabilityService
         $now = Carbon::now($tz);
 
         if ($date->copy()->startOfDay()->lt($now->copy()->startOfDay())) {
+            return [];
+        }
+
+        if ($date->copy()->startOfDay()->gt($now->copy()->addDays($business->booking_max_advance_days)->endOfDay())) {
             return [];
         }
 
@@ -56,6 +72,22 @@ class AvailabilityService
             'end' => Carbon::createFromFormat('H:i:s', $b->end_time, $tz),
         ])->all();
 
+        $timeOff = StaffTimeOff::query()
+            ->where('staff_id', $q->staffId)
+            ->where('date', $q->date)
+            ->get();
+
+        if ($timeOff->contains(fn (StaffTimeOff $absence): bool => $absence->isFullDay())) {
+            return [];
+        }
+
+        foreach ($timeOff as $absence) {
+            $busy[] = [
+                'start' => Carbon::createFromFormat('H:i:s', $absence->start_time, $tz),
+                'end' => Carbon::createFromFormat('H:i:s', $absence->end_time, $tz),
+            ];
+        }
+
         $slots = [];
 
         foreach ($schedules as $sch) {
@@ -73,11 +105,13 @@ class AvailabilityService
                     $tz,
                 );
 
-                if ($slotStartsAt->gt($now) && ! $this->overlapsBusy($slotStart, $slotEnd, $busy)) {
+                $earliestBookingAt = $now->copy()->addMinutes($business->booking_min_notice_minutes);
+
+                if ($slotStartsAt->gte($earliestBookingAt) && ! $this->overlapsBusy($slotStart, $slotEnd, $busy)) {
                     $slots[] = $slotStart->format('H:i');
                 }
 
-                $cursor->addMinutes($q->stepMin);
+                $cursor->addMinutes($business->slot_interval_minutes);
             }
         }
 

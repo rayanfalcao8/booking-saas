@@ -63,12 +63,7 @@ class CreateBookingAction
             booking: $booking,
         );
 
-        $this->sendMailNotification(
-            recipientEmail: $booking->customer_email,
-            notification: new CustomerBookingConfirmed($booking),
-            audience: 'customer',
-            booking: $booking,
-        );
+        $this->sendCustomerNotification($booking);
     }
 
     private function sendMailNotification(
@@ -83,12 +78,36 @@ class CreateBookingAction
 
         try {
             Notification::route('mail', $recipientEmail)
-                ->notifyNow($notification);
+                ->notify($notification);
         } catch (Throwable $exception) {
             Log::warning('Booking notification delivery failed.', [
                 'booking_id' => $booking->id,
                 'audience' => $audience,
                 'recipient_email' => $recipientEmail,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    private function sendCustomerNotification(Booking $booking): void
+    {
+        if (! is_string($booking->customer_email) || $booking->customer_email === '') {
+            return;
+        }
+
+        try {
+            $recipient = Notification::route('mail', $booking->customer_email);
+
+            if (is_string($booking->customer_phone) && $booking->customer_phone !== '') {
+                $recipient->route('sms', $booking->customer_phone);
+            }
+
+            $recipient->notify(new CustomerBookingConfirmed($booking));
+        } catch (Throwable $exception) {
+            Log::warning('Booking notification delivery failed.', [
+                'booking_id' => $booking->id,
+                'audience' => 'customer',
+                'recipient_email' => $booking->customer_email,
                 'exception' => $exception->getMessage(),
             ]);
         }

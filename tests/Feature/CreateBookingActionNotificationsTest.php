@@ -55,7 +55,8 @@ class CreateBookingActionNotificationsTest extends TestCase
         Notification::assertSentOnDemand(CustomerBookingConfirmed::class, function (object $notification, array $channels, object $notifiable) use ($booking): bool {
             return in_array('mail', $channels, true)
                 && $notification->booking->is($booking)
-                && ($notifiable->routes['mail'] ?? null) === 'client@example.com';
+                && ($notifiable->routes['mail'] ?? null) === 'client@example.com'
+                && ($notifiable->routes['sms'] ?? null) === '555-0100';
         });
     }
 
@@ -87,7 +88,7 @@ class CreateBookingActionNotificationsTest extends TestCase
         [, $service, $staff] = $this->seedBookingContext();
 
         $dispatcher = Mockery::mock(Dispatcher::class);
-        $dispatcher->shouldReceive('sendNow')
+        $dispatcher->shouldReceive('send')
             ->twice()
             ->andThrow(new RuntimeException('Mail transport unavailable.'));
 
