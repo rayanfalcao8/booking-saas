@@ -13,11 +13,12 @@ class ExampleTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Reservix')
-            ->assertSee("Vos rendez-vous n'ont plus besoin de vos messages.", escape: false)
-            ->assertSee('Le service')
-            ->assertSee('Les avantages')
-            ->assertSee('Sécurité')
-            ->assertSee('FAQ')
+            ->assertSee('Vos clients réservent.')
+            ->assertSee('Vous gardez le rythme.')
+            ->assertSee('Un parcours qui va droit au but')
+            ->assertSee('Ce qui change au quotidien')
+            ->assertSee('Sécurité intégrée')
+            ->assertSee('Questions fréquentes')
             ->assertSee('/app/login', escape: false)
             ->assertDontSee('Laravel has an incredibly rich ecosystem');
     }
