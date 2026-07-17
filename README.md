@@ -58,6 +58,8 @@ Then booking notification emails are written to `storage/logs/laravel.log`.
 
 If you use Mailpit or Mailtrap, configure the mailer variables in `.env`.
 
+For the complete local email/SMS setup and the staging-to-production gates, see [`RELEASE_PLAN.md`](RELEASE_PLAN.md).
+
 ## Troubleshooting Styles
 If the public booking page appears unstyled:
 

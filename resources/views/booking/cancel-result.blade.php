@@ -1,61 +1,60 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Annulation réservation</title>
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @endif
-</head>
-<body class="min-h-screen bg-stone-50 text-stone-950">
-<main class="mx-auto flex min-h-screen max-w-2xl items-center px-4 py-8 sm:px-6">
-    <section class="w-full rounded-[2rem] border border-stone-200 bg-white p-6 shadow-[0_20px_80px_rgba(28,25,23,0.08)] sm:p-8">
-        <div class="inline-flex rounded-full px-4 py-2 text-sm font-semibold {{ $status === 'success' ? 'bg-emerald-100 text-emerald-800' : ($status === 'confirm' ? 'bg-amber-100 text-amber-900' : 'bg-red-100 text-red-800') }}">
-            {{ $status === 'success' ? 'Annulation confirmée' : ($status === 'confirm' ? 'Confirmation requise' : 'Erreur d’annulation') }}
+@php
+    $isSuccess = $status === 'success';
+    $isConfirmation = $status === 'confirm';
+    $title = $isSuccess ? 'Votre réservation est annulée' : ($isConfirmation ? 'Annuler cette réservation ?' : 'Impossible d’annuler');
+@endphp
+
+<x-public.layout
+    :title="$title.' — Reservix'"
+    description="Gérez l’annulation de votre réservation Reservix."
+    body-class="transaction-page"
+>
+    <header class="booking-topbar">
+        <div class="booking-topbar__inner">
+            <x-public.brand :href="url('/')" />
+            @if ($business)
+                <p class="booking-provider"><span>Réservation auprès de</span><strong>{{ $business->name }}</strong></p>
+            @endif
         </div>
+    </header>
 
-        <h1 class="mt-4 text-3xl font-semibold tracking-tight">
-            {{ $status === 'success' ? 'Votre réservation est annulée' : ($status === 'confirm' ? 'Annuler cette réservation ?' : 'Impossible d’annuler') }}
-        </h1>
-
-        <p class="mt-3 text-sm leading-6 text-stone-600 sm:text-base">{{ $message }}</p>
-
-        @if ($booking)
-            <div class="mt-8 grid gap-4 rounded-3xl border border-stone-200 bg-stone-50 p-5 sm:grid-cols-2">
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">Business</p>
-                    <p class="mt-1 text-base font-medium text-stone-900">{{ $business->name }}</p>
-                </div>
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">Service</p>
-                    <p class="mt-1 text-base font-medium text-stone-900">{{ $booking->service?->name ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">Prestataire</p>
-                    <p class="mt-1 text-base font-medium text-stone-900">{{ $booking->staff?->name ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">Date et heure</p>
-                    <p class="mt-1 text-base font-medium text-stone-900">{{ $booking->date }} · {{ $booking->start_time }}</p>
-                </div>
+    <main class="transaction-main">
+        <section class="transaction-card">
+            <div class="transaction-icon {{ $isConfirmation ? 'transaction-icon--warning' : ($isSuccess ? '' : 'transaction-icon--error') }}">
+                @if ($isSuccess)
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 12 4 4 8-9"/></svg>
+                @elseif ($isConfirmation)
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+                @else
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 8 8 8M16 8l-8 8"/><circle cx="12" cy="12" r="9"/></svg>
+                @endif
             </div>
-        @endif
+            <p class="transaction-kicker">{{ $isSuccess ? 'Annulation confirmée' : ($isConfirmation ? 'Confirmation requise' : 'Lien indisponible') }}</p>
+            <h1>{{ $title }}</h1>
+            <p class="transaction-lead">{{ $message }}</p>
 
-        @if ($status === 'confirm' && $cancelAction)
-            <form class="mt-8" method="POST" action="{{ $cancelAction }}">
-                @csrf
-                <button
-                    class="inline-flex items-center justify-center rounded-full bg-red-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-700 focus:ring-offset-2"
-                    type="submit"
-                >
-                    Confirmer l’annulation
-                </button>
-            </form>
-        @endif
-    </section>
-</main>
-</body>
-</html>
+            @if ($booking)
+                <dl class="transaction-details">
+                    <div><dt>Établissement</dt><dd>{{ $business->name }}</dd></div>
+                    <div><dt>Service</dt><dd>{{ $booking->service?->name ?? '—' }}</dd></div>
+                    <div><dt>Avec</dt><dd>{{ $booking->staff?->name ?? '—' }}</dd></div>
+                    <div><dt>Date et heure</dt><dd>{{ $booking->date }} · {{ $booking->start_time }}</dd></div>
+                </dl>
+            @endif
+
+            <div class="transaction-actions">
+                @if ($isConfirmation && $cancelAction)
+                    <form method="POST" action="{{ $cancelAction }}">
+                        @csrf
+                        <button class="transaction-danger" type="submit">Confirmer l’annulation</button>
+                    </form>
+                    <a class="transaction-link" href="{{ route('public.booking.confirmation', ['business' => $business->slug, 'booking' => $booking->id, 'token' => request()->route('token')]) }}">Garder mon rendez-vous</a>
+                @elseif ($isSuccess && $business)
+                    <a class="transaction-link" href="{{ route('public.booking.page', ['business' => $business->slug]) }}">Choisir un autre créneau</a>
+                @else
+                    <a class="transaction-link" href="{{ url('/') }}">Retour à l’accueil</a>
+                @endif
+            </div>
+        </section>
+    </main>
+</x-public.layout>

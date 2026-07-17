@@ -19,6 +19,9 @@ Use seeded staging data from `php artisan db:seed --force` before running this c
 - Confirm the API response is successful and the confirmation page loads.
 - Confirm the new booking appears in the correct business dashboard under `/app/bookings`.
 - Confirm the chosen service, staff member, date, and timeslot are saved correctly.
+- Use the `Modifier` actions to revisit service, date, and slot without losing unrelated customer input.
+- Change the date while availability is loading and confirm results from the previous date never replace the current date.
+- Confirm the active step, completed steps, and appointment summary remain synchronized.
 
 ## Provider Dashboard
 
@@ -79,6 +82,8 @@ Use seeded staging data from `php artisan db:seed --force` before running this c
 
 - Test the public booking flow on a narrow mobile viewport.
 - Confirm service selection, date selection, slot selection, and customer form fields remain usable without horizontal overflow.
+- Confirm only the active booking step is expanded and completed steps can be reopened.
+- Confirm date and slot buttons expose a visible selected state and remain keyboard accessible.
 - Confirm confirmation and cancellation pages remain readable on mobile.
 - Test `/app/login` and `/app/bookings` on mobile width for basic usability.
 

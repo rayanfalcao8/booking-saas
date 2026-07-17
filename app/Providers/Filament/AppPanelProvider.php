@@ -33,8 +33,9 @@ class AppPanelProvider extends PanelProvider
             ->authGuard('web')
             ->brandName('Reservix')
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::Indigo,
             ])
+            ->sidebarCollapsibleOnDesktop()
             ->discoverResources(in: app_path('Filament/App/Resources'), for: 'App\\Filament\\App\\Resources')
             ->discoverPages(in: app_path('Filament/App/Pages'), for: 'App\\Filament\\App\\Pages')
             ->pages([
