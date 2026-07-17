@@ -9,6 +9,15 @@
         'id' => $staffMember->id,
         'name' => $staffMember->name,
     ])->values();
+
+    $bookingConfig = [
+        'availabilityUrl' => $availabilityUrlTemplate,
+        'bookingUrl' => $bookingUrlTemplate,
+        'minDate' => $bookingMinDate,
+        'maxDate' => $bookingMaxDate,
+        'services' => $servicePayload,
+        'staffMembers' => $staffPayload,
+    ];
 @endphp
 
 <x-public.layout
@@ -174,12 +183,5 @@
         </div>
     </main>
 
-    <script id="booking-config" type="application/json">@json([
-        'availabilityUrl' => $availabilityUrlTemplate,
-        'bookingUrl' => $bookingUrlTemplate,
-        'minDate' => $bookingMinDate,
-        'maxDate' => $bookingMaxDate,
-        'services' => $servicePayload,
-        'staffMembers' => $staffPayload,
-    ])</script>
+    <script id="booking-config" type="application/json">@json($bookingConfig)</script>
 </x-public.layout>
