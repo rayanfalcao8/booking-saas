@@ -56,5 +56,26 @@ class StaffSchedule extends Model
                 'staff_id' => 'Le prestataire sélectionné est invalide pour ce business.',
             ]);
         }
+
+        if ((string) $this->end_time <= (string) $this->start_time) {
+            throw ValidationException::withMessages([
+                'end_time' => 'La fin doit être après le début.',
+            ]);
+        }
+
+        $hasOverlap = self::withoutGlobalScopes()
+            ->where('business_id', $this->business_id)
+            ->where('staff_id', $this->staff_id)
+            ->where('day_of_week', $this->day_of_week)
+            ->when($this->exists, fn ($query) => $query->whereKeyNot($this->getKey()))
+            ->where('start_time', '<', $this->end_time)
+            ->where('end_time', '>', $this->start_time)
+            ->exists();
+
+        if ($hasOverlap) {
+            throw ValidationException::withMessages([
+                'start_time' => 'Cet horaire chevauche une plage existante pour ce prestataire.',
+            ]);
+        }
     }
 }

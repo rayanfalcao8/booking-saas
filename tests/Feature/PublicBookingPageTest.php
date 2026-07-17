@@ -64,10 +64,11 @@ class PublicBookingPageTest extends TestCase
             ->assertSee('Alice')
             ->assertDontSee('Massage')
             ->assertDontSee('Bob')
-            ->assertSee('Choisissez votre service')
-            ->assertSee('Choisissez une date')
-            ->assertSee('Choisissez un créneau')
-            ->assertSee('Vos informations')
+            ->assertSee('Quel service souhaitez-vous ?')
+            ->assertSee('Quel jour vous convient ?')
+            ->assertSee('À quelle heure ?')
+            ->assertSee('À qui réservons-nous ce créneau ?')
+            ->assertSee('data-booking-app', false)
             ->assertSee('Confirmer la réservation');
     }
 }

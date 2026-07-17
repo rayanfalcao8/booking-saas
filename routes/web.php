@@ -21,8 +21,12 @@ Route::middleware([InitializeTenant::class])->group(function () {
     Route::get('/b/{business:slug}/book', PublicBookingPageController::class)
         ->name('public.booking.page');
 
-    Route::get('/b/{business:slug}/book/{booking}/cancel/{token}', PublicBookingCancelController::class)
+    Route::get('/b/{business:slug}/book/{booking}/cancel/{token}', [PublicBookingCancelController::class, 'show'])
         ->name('public.booking.cancel');
+
+    Route::post('/b/{business:slug}/book/{booking}/cancel/{token}', [PublicBookingCancelController::class, 'cancel'])
+        ->middleware('throttle:public-bookings')
+        ->name('public.booking.cancel.perform');
 
     Route::get('/b/{business:slug}/book/{booking}/confirmation/{token}', PublicBookingConfirmationController::class)
         ->name('public.booking.confirmation');

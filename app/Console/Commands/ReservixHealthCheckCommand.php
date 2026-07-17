@@ -8,17 +8,20 @@ use Illuminate\Support\Facades\Schema;
 
 class ReservixHealthCheckCommand extends Command
 {
-    protected $signature = 'reservix:health-check';
+    protected $signature = 'reservix:health-check
+        {--production : Require production-safe application settings}
+        {--require-sms : Require a production SMS provider}';
 
-    protected $description = 'Verify staging readiness for app boot, database, mail, and queue configuration.';
+    protected $description = 'Verify Reservix environment, database, mail, queue, and SMS readiness.';
 
     public function handle(): int
     {
         $checks = [
-            ['App boot', true, sprintf('Laravel booted in the "%s" environment.', app()->environment())],
+            ['Application', ...$this->applicationCheck()],
             ['Database', ...$this->databaseCheck()],
             ['Mail config', ...$this->mailCheck()],
             ['Queue config', ...$this->queueCheck()],
+            ['SMS config', ...$this->smsCheck()],
         ];
 
         $this->table(
@@ -34,14 +37,46 @@ class ReservixHealthCheckCommand extends Command
         );
 
         if (collect($checks)->every(fn (array $check): bool => $check[1])) {
-            $this->info('Reservix staging health check passed.');
+            $this->info('Reservix health check passed.');
 
             return self::SUCCESS;
         }
 
-        $this->error('Reservix staging health check failed.');
+        $this->error('Reservix health check failed.');
 
         return self::FAILURE;
+    }
+
+    /**
+     * @return array{0: bool, 1: string}
+     */
+    private function applicationCheck(): array
+    {
+        $environment = app()->environment();
+
+        if (! $this->option('production')) {
+            return [true, sprintf('Laravel booted in the "%s" environment.', $environment)];
+        }
+
+        if ($environment !== 'production') {
+            return [false, sprintf('APP_ENV must be "production"; current value is "%s".', $environment)];
+        }
+
+        if (config('app.debug')) {
+            return [false, 'APP_DEBUG must be false in production.'];
+        }
+
+        $appUrl = (string) config('app.url');
+
+        if (! str_starts_with($appUrl, 'https://')) {
+            return [false, 'APP_URL must use HTTPS in production.'];
+        }
+
+        if (trim((string) config('app.key')) === '') {
+            return [false, 'APP_KEY is not configured.'];
+        }
+
+        return [true, sprintf('Production settings are safe for %s.', $appUrl)];
     }
 
     /**
@@ -63,8 +98,13 @@ class ReservixHealthCheckCommand extends Command
      */
     private function mailCheck(): array
     {
+        $mailer = (string) config('mail.default');
+
+        if (! in_array($mailer, ['smtp', 'failover'], true)) {
+            return [false, sprintf('MAIL_MAILER must deliver through SMTP; current value is "%s".', $mailer)];
+        }
+
         $requiredKeys = [
-            'mail.default' => config('mail.default'),
             'mail.from.address' => config('mail.from.address'),
             'mail.from.name' => config('mail.from.name'),
             'mail.mailers.smtp.host' => config('mail.mailers.smtp.host'),
@@ -93,13 +133,19 @@ class ReservixHealthCheckCommand extends Command
             return [false, 'Missing mail configuration values: '.implode(', ', $missingKeys)];
         }
 
-        $failoverMailers = config('mail.mailers.failover.mailers', []);
+        if ($mailer === 'failover') {
+            $failoverMailers = config('mail.mailers.failover.mailers', []);
 
-        if (! in_array('smtp', $failoverMailers, true) || ! in_array('log', $failoverMailers, true)) {
-            return [false, 'Failover mailer must include both smtp and log mailers.'];
+            if (! in_array('smtp', $failoverMailers, true)) {
+                return [false, 'Failover mailer must include the smtp mailer.'];
+            }
+
+            if ($this->option('production') && in_array('log', $failoverMailers, true)) {
+                return [false, 'Production failover must not hide delivery failures with the log mailer.'];
+            }
         }
 
-        return [true, sprintf('Mailer "%s" is configured with SMTP failover.', config('mail.default'))];
+        return [true, sprintf('Mailer "%s" is configured for SMTP delivery.', $mailer)];
     }
 
     /**
@@ -128,5 +174,36 @@ class ReservixHealthCheckCommand extends Command
         }
 
         return [true, sprintf('Queue connection "%s" is configured.', $defaultConnection)];
+    }
+
+    /**
+     * @return array{0: bool, 1: string}
+     */
+    private function smsCheck(): array
+    {
+        $driver = (string) config('services.sms.driver', 'off');
+
+        if (! in_array($driver, ['off', 'log', 'twilio'], true)) {
+            return [false, sprintf('Unsupported SMS driver "%s".', $driver)];
+        }
+
+        if (! $this->option('require-sms')) {
+            return [true, sprintf('SMS driver is "%s" (not required for this check).', $driver)];
+        }
+
+        if ($driver !== 'twilio') {
+            return [false, 'SMS_DRIVER must be "twilio" when SMS delivery is required.'];
+        }
+
+        $accountSid = trim((string) config('services.sms.twilio.account_sid'));
+        $authToken = trim((string) config('services.sms.twilio.auth_token'));
+        $from = trim((string) config('services.sms.twilio.from'));
+        $messagingServiceSid = trim((string) config('services.sms.twilio.messaging_service_sid'));
+
+        if ($accountSid === '' || $authToken === '' || ($from === '' && $messagingServiceSid === '')) {
+            return [false, 'Twilio requires an account SID, auth token, and either a sender or Messaging Service SID.'];
+        }
+
+        return [true, 'Twilio is configured for SMS delivery.'];
     }
 }

@@ -10,14 +10,15 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Validation\ValidationException;
 
 class StaffScheduleResource extends Resource
 {
     protected static ?string $model = StaffSchedule::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
+
     protected static ?string $navigationGroup = 'Catalogue';
+
     protected static ?string $navigationLabel = 'Horaires';
 
     public static function form(Form $form): Form

@@ -35,7 +35,6 @@ class PublicAvailabilityRequest extends FormRequest
                 ),
             ],
             'date' => ['required', 'date_format:Y-m-d'],
-            'step_min' => ['nullable', 'integer', 'min:5', 'max:60'],
         ];
     }
 

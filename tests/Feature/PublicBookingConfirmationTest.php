@@ -2,14 +2,15 @@
 
 namespace Tests\Feature;
 
-use Carbon\Carbon;
 use App\Core\Tenancy\TenantManager;
 use App\Domain\Booking\Actions\CreateBookingAction;
 use App\Models\Business;
 use App\Models\Service;
 use App\Models\Staff;
 use App\Models\StaffSchedule;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class PublicBookingConfirmationTest extends TestCase
@@ -39,13 +40,12 @@ class PublicBookingConfirmationTest extends TestCase
             ->assertSee('Annuler cette réservation');
     }
 
-
     public function test_it_returns_not_found_for_expired_confirmation_token(): void
     {
         [$business, $booking] = $this->seedBooking();
 
         $booking->forceFill([
-            'cancellation_expires_at' => now()->subMinute(),
+            'cancellation_expires_at' => Carbon::create(2026, 2, 28, 12, 0, 0, 'America/Montreal'),
         ])->save();
 
         $response = $this->get(route('public.booking.confirmation', [
@@ -72,6 +72,8 @@ class PublicBookingConfirmationTest extends TestCase
 
     private function seedBooking(): array
     {
+        Notification::fake();
+
         $business = Business::query()->create([
             'name' => 'Confirm Studio',
             'slug' => 'confirm-studio',

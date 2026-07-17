@@ -15,13 +15,16 @@ class BookingNotificationMailerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_customer_booking_confirmation_uses_failover_mailer(): void
+    public function test_customer_booking_confirmation_uses_the_environment_mailer(): void
     {
         $booking = $this->makeBooking();
 
         $message = (new CustomerBookingConfirmed($booking))->toMail(new \stdClass);
+        $notification = new CustomerBookingConfirmed($booking);
 
-        $this->assertSame('failover', $message->mailer);
+        $this->assertNull($message->mailer);
+        $this->assertSame(3, $notification->tries);
+        $this->assertSame([60, 300], $notification->backoff());
         $this->assertSame('mail.bookings.customer-confirmed', $message->markdown);
         $this->assertSame('Confirmation de votre réservation', $message->subject);
         $this->assertArrayHasKey('confirmationUrl', $message->viewData);
@@ -30,13 +33,16 @@ class BookingNotificationMailerTest extends TestCase
         $this->assertStringContainsString("/b/{$booking->business->slug}/book/{$booking->id}/cancel/{$booking->cancellation_token}", $message->viewData['cancelUrl']);
     }
 
-    public function test_business_booking_notification_uses_failover_mailer(): void
+    public function test_business_booking_notification_uses_the_environment_mailer(): void
     {
         $booking = $this->makeBooking();
 
         $message = (new BusinessBookingCreated($booking))->toMail(new \stdClass);
+        $notification = new BusinessBookingCreated($booking);
 
-        $this->assertSame('failover', $message->mailer);
+        $this->assertNull($message->mailer);
+        $this->assertSame(3, $notification->tries);
+        $this->assertSame([60, 300], $notification->backoff());
         $this->assertSame('mail.bookings.business-created', $message->markdown);
         $this->assertSame('Nouvelle réservation confirmée', $message->subject);
         $this->assertSame('Studio Demo', $message->viewData['businessName']);

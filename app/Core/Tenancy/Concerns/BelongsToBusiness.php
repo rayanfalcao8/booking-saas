@@ -9,7 +9,7 @@ trait BelongsToBusiness
 {
     protected static function bootBelongsToBusiness(): void
     {
-        static::addGlobalScope(new BusinessScope());
+        static::addGlobalScope(new BusinessScope);
 
         static::creating(function ($model) {
             if (empty($model->business_id) && TenantManager::id()) {

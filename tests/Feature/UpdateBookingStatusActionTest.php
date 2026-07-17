@@ -9,6 +9,7 @@ use App\Models\Business;
 use App\Models\Service;
 use App\Models\Staff;
 use App\Models\StaffSchedule;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -37,6 +38,7 @@ class UpdateBookingStatusActionTest extends TestCase
     public function test_it_allows_no_show_after_appointment_time(): void
     {
         [, $booking] = $this->seedBooking('2026-03-10', '09:00');
+        Carbon::setTestNow(Carbon::create(2026, 3, 10, 10, 0, 0, 'America/Montreal'));
 
         $updated = app(UpdateBookingStatusAction::class)->run($booking, 'no_show');
 
@@ -46,6 +48,7 @@ class UpdateBookingStatusActionTest extends TestCase
     public function test_it_allows_marking_a_booking_as_completed_after_end_time(): void
     {
         [, $booking] = $this->seedBooking('2026-03-10', '09:00');
+        Carbon::setTestNow(Carbon::create(2026, 3, 10, 10, 0, 0, 'America/Montreal'));
 
         $updated = app(UpdateBookingStatusAction::class)->run($booking, 'completed');
 
@@ -68,12 +71,31 @@ class UpdateBookingStatusActionTest extends TestCase
     public function test_it_allows_confirming_a_no_show_booking_again(): void
     {
         [, $booking] = $this->seedBooking('2026-03-10', '09:00');
+        Carbon::setTestNow(Carbon::create(2026, 3, 10, 10, 0, 0, 'America/Montreal'));
 
         $action = app(UpdateBookingStatusAction::class);
         $booking = $action->run($booking, 'no_show');
         $booking = $action->run($booking, 'confirmed');
 
         $this->assertSame('confirmed', $booking->status);
+    }
+
+    public function test_it_rejects_a_booking_from_another_tenant(): void
+    {
+        [, $booking] = $this->seedBooking('2026-03-10', '09:00');
+
+        $otherBusiness = Business::query()->create([
+            'name' => 'Other Status Studio',
+            'slug' => 'other-status-studio',
+            'timezone' => 'America/Montreal',
+        ]);
+
+        TenantManager::set($otherBusiness);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('La réservation sélectionnée est invalide pour ce business.');
+
+        app(UpdateBookingStatusAction::class)->run($booking, 'canceled');
     }
 
     private function seedBooking(string $date, string $startTime): array
@@ -83,6 +105,7 @@ class UpdateBookingStatusActionTest extends TestCase
             'slug' => 'status-studio',
             'timezone' => 'America/Montreal',
             'email' => 'status@example.com',
+            'booking_max_advance_days' => 3650,
         ]);
 
         TenantManager::set($business);

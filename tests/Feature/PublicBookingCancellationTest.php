@@ -2,14 +2,15 @@
 
 namespace Tests\Feature;
 
-use Carbon\Carbon;
 use App\Core\Tenancy\TenantManager;
 use App\Domain\Booking\Actions\CreateBookingAction;
 use App\Models\Business;
 use App\Models\Service;
 use App\Models\Staff;
 use App\Models\StaffSchedule;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class PublicBookingCancellationTest extends TestCase
@@ -23,7 +24,7 @@ class PublicBookingCancellationTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_it_cancels_booking_from_public_cancel_link(): void
+    public function test_it_only_displays_confirmation_from_public_cancel_link(): void
     {
         [$business, $booking] = $this->seedBooking();
 
@@ -33,7 +34,28 @@ class PublicBookingCancellationTest extends TestCase
             'token' => $booking->cancellation_token,
         ]));
 
-        $response->assertOk()->assertSee('Annulation confirmée');
+        $response
+            ->assertOk()
+            ->assertSee('Annuler cette réservation ?')
+            ->assertSee('Confirmer l’annulation');
+
+        $this->assertDatabaseHas('bookings', [
+            'id' => $booking->id,
+            'status' => 'confirmed',
+        ]);
+    }
+
+    public function test_it_cancels_booking_after_explicit_confirmation(): void
+    {
+        [$business, $booking] = $this->seedBooking();
+
+        $response = $this->post(route('public.booking.cancel.perform', [
+            'business' => $business->slug,
+            'booking' => $booking->id,
+            'token' => $booking->cancellation_token,
+        ]));
+
+        $response->assertOk()->assertSee('Votre réservation est annulée');
 
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,
@@ -51,14 +73,13 @@ class PublicBookingCancellationTest extends TestCase
             'token' => 'invalid-token',
         ]));
 
-        $response->assertOk()->assertSee('Erreur d’annulation');
+        $response->assertOk()->assertSee('Impossible d’annuler');
 
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,
             'status' => 'confirmed',
         ]);
     }
-
 
     public function test_it_prevents_canceling_booking_from_another_tenant_slug(): void
     {
@@ -82,13 +103,12 @@ class PublicBookingCancellationTest extends TestCase
         ]);
     }
 
-
     public function test_it_rejects_expired_cancellation_token(): void
     {
         [$business, $booking] = $this->seedBooking();
 
         $booking->forceFill([
-            'cancellation_expires_at' => now()->subMinute(),
+            'cancellation_expires_at' => Carbon::create(2026, 2, 28, 12, 0, 0, 'America/Montreal'),
         ])->save();
 
         $response = $this->postJson("/api/b/{$business->slug}/book/{$booking->id}/cancel", [
@@ -115,6 +135,8 @@ class PublicBookingCancellationTest extends TestCase
 
     private function seedBooking(): array
     {
+        Notification::fake();
+
         $business = Business::query()->create([
             'name' => 'Cancel Studio',
             'slug' => 'cancel-studio',
